@@ -1,7 +1,10 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-preprocessor";
+import "hardhat-gas-reporter";
 import fs from "fs";
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 function getRemappings() {
   return fs
@@ -12,6 +15,14 @@ function getRemappings() {
 }
 
 const config: HardhatUserConfig = {
+  networks: {
+    hardhat: {
+    },
+    goerli: {
+      url: process.env.GOERLI,
+      accounts: [process.env.OWNER]
+    }
+  },
   solidity: "0.8.16",
   preprocess: {
     eachLine: (hre) => ({
@@ -30,6 +41,7 @@ const config: HardhatUserConfig = {
   },
   paths: {
     sources: "./src",
+    tests: "./hardhat/test",
     cache: "./cache_hardhat",
   },
 };

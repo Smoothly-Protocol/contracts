@@ -136,19 +136,15 @@ contract SmoothlyPoolTest is Test, SmoothlyPool {
     vm.startPrank(msg.sender);
     assertEq(pool.getValidators()[0].stake, 0.35 ether);
     vm.expectRevert(bytes("Stake fee bigger than allowed"));
-    uint[] memory ids = new uint[](1);
-    for(uint i; i < 1; i++) {
-      ids[i] = i;
-    }
-    pool.addStake{value: 0.31 ether}(ids);
-    pool.addStake{value: 0.30 ether}(ids);
+    pool.addStake{value: 0.31 ether}(0);
+    pool.addStake{value: 0.30 ether}(0);
     assertEq(pool.getValidators()[0].stake, 0.65 ether);
     r[0] = RebalanceUser(msg.sender, 0, 1000, 0, 1, true);		
     vm.stopPrank();
     pool.rebalanceRewards(r, 0);	
     vm.prank(msg.sender);
     vm.expectRevert(bytes("Validator not allowed to add more stake"));
-    pool.addStake{value: 0.15 ether}(ids);
+    pool.addStake{value: 0.15 ether}(0);
   }
 
   function testExitProtocol() public {

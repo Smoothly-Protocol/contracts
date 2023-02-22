@@ -6,7 +6,7 @@ import "../src/SmoothlyPool.sol";
 
 contract Deployer is Script { 
   function run() public {
-    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_1");
+    uint256 deployerPrivateKey = vm.envUint("OWNER");
     vm.startBroadcast(deployerPrivateKey);
 
     new SmoothlyPool();

@@ -6,7 +6,7 @@ import "../src/SmoothlyPool.sol";
 
 contract Withdrawal is Script { 
   function run() public {
-    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_1");
+    uint256 deployerPrivateKey = vm.envUint("OWNER");
     vm.startBroadcast(deployerPrivateKey);
 
     SmoothlyPool pool = SmoothlyPool(payable(0xBc18866BAaAa12201d977e5ac71eC575D4d06e61));
