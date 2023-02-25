@@ -56,7 +56,7 @@ describe("Load Scenario", function () {
       console.log("root:", trie.root());
       const key = Buffer.from(user.address.toLowerCase());
       console.log("addr", user.address);
-      console.log("key-regular", key);
+      console.log("key-regular", key.toString('hex'));
       console.log("key", keccak256(key));
       const proof = await trie.createProof(key);
       const value = await trie.verifyProof(trie.root(), key, proof) as Buffer;

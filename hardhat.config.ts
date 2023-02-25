@@ -44,6 +44,9 @@ const config: HardhatUserConfig = {
     tests: "./hardhat/test",
     cache: "./cache_hardhat",
   },
+  gasReporter: {
+    enabled: true
+  }
 };
 
 export default config;

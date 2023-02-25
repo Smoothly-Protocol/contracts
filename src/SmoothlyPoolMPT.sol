@@ -3,6 +3,7 @@ pragma solidity ^0.8.16;
 
 import "openzeppelin-contracts/access/Ownable.sol";
 import "openzeppelin-contracts/security/ReentrancyGuard.sol";
+import "openzeppelin-contracts/utils/Strings.sol";
 import "Solidity-RLP/RLPReader.sol";
 import "./MPTVerifier.sol";
 import "hardhat/console.sol";
@@ -10,6 +11,7 @@ import "hardhat/console.sol";
 contract SmoothlyPoolMPT is MPTVerifier, Ownable, ReentrancyGuard {
   using RLPReader for RLPReader.RLPItem;
   using RLPReader for bytes;
+  using Strings for address;
 
   uint constant STAKE_FEE = 0.65 ether;
   uint public EPOCH = 0;
@@ -44,20 +46,11 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable, ReentrancyGuard {
     emit ValidatorRegistered(msg.sender, string(pubKey));
   }
 
-  function addrToStr() internal view returns (bytes memory) {
-    string[19] memory st = ["70", "99", "79", "70", "c5", "18", "12" "dc", "3a", "01", "0c", "7d", "01", "b5", "0e", "0d", "17", "dc", "79", "c8"];
-    bytes memory b = abi.encodePacked(msg.sender);
-    string memory s = "0x";
-    for(uint i = 0; i < st.length; ++i) {
-      s = string.concat(s, st[i]);
-    }
-    return bytes(s);
-  }
 
 function withdrawRewards(ProofData memory data) nonReentrant external {
   MerkleProof memory proof = MerkleProof(
     ROOT,
-    abi.encodePacked(keccak256(addrToStr())), 
+    abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
     data.proof,
     0, 
     0, 
@@ -86,7 +79,7 @@ function withdrawRewards(ProofData memory data) nonReentrant external {
 function exit(ProofData memory data, bytes[] memory pubKeys) nonReentrant external {
   MerkleProof memory proof = MerkleProof(
     ROOT,
-    abi.encodePacked(keccak256(addrToStr())), 
+    abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
     data.proof,
     0, 
     0, 
@@ -110,7 +103,7 @@ function reqExit(bytes[] memory pubKeys) external {
 function addStake(ProofData memory data, bytes memory pubKey) external payable {
   MerkleProof memory proof = MerkleProof(
     ROOT,
-    abi.encodePacked(keccak256(addrToStr())), 
+    abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
     data.proof,
     0, 
     0, 
