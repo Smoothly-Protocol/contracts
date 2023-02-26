@@ -2,13 +2,12 @@
 pragma solidity ^0.8.16;
 
 import "openzeppelin-contracts/access/Ownable.sol";
-import "openzeppelin-contracts/security/ReentrancyGuard.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
 import "Solidity-RLP/RLPReader.sol";
 import "./MPTVerifier.sol";
 import "hardhat/console.sol";
 
-contract SmoothlyPoolMPT is MPTVerifier, Ownable, ReentrancyGuard {
+contract SmoothlyPoolMPT is MPTVerifier, Ownable {
   using RLPReader for RLPReader.RLPItem;
   using RLPReader for bytes;
   using Strings for address;
@@ -47,99 +46,103 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable, ReentrancyGuard {
   }
 
 
-function withdrawRewards(ProofData memory data) nonReentrant external {
-  MerkleProof memory proof = MerkleProof(
-    ROOT,
-    abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
-    data.proof,
-    0, 
-    0, 
-    data.expectedValue
-  );
-  require(verifyProof(proof), "Validator not registered");
-  require(!claimedWithdrawal[msg.sender][EPOCH], "Already claimed withdrawal for current epoch");
-  RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
-  uint tRewards;
-  // Calculate rewards for all validators
-  for(uint i = 0; i < validators.length; ++i) {
-    RLPReader.RLPItem[] memory validator = validators[i].toList(); 
-    // Validator needs to be active
-    if(validator[5].toBoolean()) {
-      uint vRewards = validator[1].toUint();
-      tRewards += vRewards;    
-      emit Withdrawal(msg.sender, string(validator[0].toBytes()), vRewards);
+  // TODO: Test for reentrancy
+  function withdrawRewards(ProofData memory data) external {
+    MerkleProof memory proof = buildProof(data); 
+    require(verifyProof(proof), "Validator not registered");
+    require(!claimedWithdrawal[msg.sender][EPOCH], "Already claimed withdrawal for current epoch");
+    RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
+    uint tRewards;
+
+    // Calculate rewards for all validators
+    for(uint i = 0; i < validators.length; ++i) {
+      RLPReader.RLPItem[] memory validator = validators[i].toList(); 
+      // Validator needs to be active
+      if(validator[5].toBoolean()) {
+        uint vRewards = validator[1].toUint();
+        tRewards += vRewards;    
+        emit Withdrawal(msg.sender, string(validator[0].toBytes()), vRewards);
+      }
+    }
+
+    // Send Funds
+    claimedWithdrawal[msg.sender][EPOCH] = true;
+    require(tRewards > 0, "0 Rewards or inactive validators");
+    (bool sent, ) = payable(msg.sender).call{value: tRewards, gas: 2300}("");
+    require(sent, "Failed to send Ether");
+  }
+
+  // TODO: Test for reentrancy
+  function exit(ProofData memory data, bytes[] memory pubKeys) external {
+    MerkleProof memory proof = buildProof(data); 
+    require(verifyProof(proof), "Validator not registered");
+    RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
+    uint tRewards;
+    uint tStake;
+
+    // Exit 
+    for(uint i = 0; i < pubKeys.length; ++i) {
+      RLPReader.RLPItem[] memory validator = findValidator(pubKeys[i], validators); 
+      require(claimExit[msg.sender][EPOCH][validator[0].toBytes()], "Exit not allowed");
+      tRewards += validator[1].toUint(); 
+      tStake += validator[4].toUint();
+      claimExit[msg.sender][EPOCH][validator[0].toBytes()] = false;
+      emit ValidatorDeactivated(string(validator[0].toBytes()));
+    }
+
+    // Send Funds
+    uint total = tRewards + tStake;
+    if(total > 0) {
+      (bool sent, ) = payable(msg.sender).call{value: total, gas: 2300}("");
+      require(sent, "Failed to send Ether");
     }
   }
-  require(tRewards > 0, "0 Rewards or inactive validators");
-  (bool sent, ) = payable(msg.sender).call{value: tRewards, gas: 2300}("");
-  require(sent, "Failed to send Ether");
-  claimedWithdrawal[msg.sender][EPOCH] = true;
-}
 
-function exit(ProofData memory data, bytes[] memory pubKeys) nonReentrant external {
-  MerkleProof memory proof = MerkleProof(
-    ROOT,
-    abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
-    data.proof,
-    0, 
-    0, 
-    data.expectedValue
-  );
-  require(verifyProof(proof), "Validator not registered");
-  RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
-  for(uint i = 0; i < pubKeys.length; ++i) {
-    RLPReader.RLPItem[] memory validator = findValidator(pubKeys[i], validators); 
-    require(claimExit[msg.sender][EPOCH][validator[0].toBytes()], "Exit not allowed");
-    // TODO: Return rewards and stake
+  function reqExit(bytes[] memory pubKeys) external {
+    for(uint i = 0; i < pubKeys.length; ++i) {
+      claimExit[msg.sender][EPOCH + 1][pubKeys[i]] = true;
+    } 
   }
-}
 
-function reqExit(bytes[] memory pubKeys) external {
-  for(uint i = 0; i < pubKeys.length; ++i) {
-    claimExit[msg.sender][EPOCH++][pubKeys[i]] = true;
-  } 
-}
+  function addStake(ProofData memory data, bytes memory pubKey) external payable {
+    MerkleProof memory proof = buildProof(data); 
+    require(verifyProof(proof), "Validator not registered");
+    require(msg.value > 0, "0 amount");
+    RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
+    RLPReader.RLPItem[] memory validator = findValidator(pubKey, validators); 
+    require((msg.value + validator[4].toUint()) <= STAKE_FEE, "Stake fee too big");
+    emit StakeAdded(msg.sender, string(pubKey), msg.value); 
+  }
 
-function addStake(ProofData memory data, bytes memory pubKey) external payable {
-  MerkleProof memory proof = MerkleProof(
-    ROOT,
-    abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
-    data.proof,
-    0, 
-    0, 
-    data.expectedValue
-  );
-  require(verifyProof(proof), "Validator not registered");
-  require(msg.value > 0, "0 amount");
-  RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
-  for(uint i = 0; i < validators.length; ++i) {
-    RLPReader.RLPItem[] memory validator = validators[i].toList(); 
-    if(keccak256(validator[0].toBytes()) == keccak256(pubKey)) {
-      require((msg.value + validator[4].toUint()) <= STAKE_FEE, "Stake fee too big");
-      emit StakeAdded(msg.sender, string(pubKey), msg.value); 
-      return;
+  function setROOT(bytes32 _root) external onlyOwner {
+    ROOT = _root;
+    EPOCH++;
+  }
+
+  function findValidator(
+    bytes memory pubKey, 
+    RLPReader.RLPItem[] memory validators
+  ) internal pure returns(RLPReader.RLPItem[] memory) {
+    for(uint i = 0; i < validators.length; ++i) {
+      RLPReader.RLPItem[] memory validator = validators[i].toList(); 
+      if(keccak256(validator[0].toBytes()) == keccak256(pubKey)) {
+        return validator;
+      }
     }
+    revert("Validator not found");
   }
-}
 
-function setROOT(bytes32 _root) external onlyOwner {
-  ROOT = _root;
-  EPOCH++;
-}
-
-function findValidator(
-  bytes memory pubKey, 
-  RLPReader.RLPItem[] memory validators
-) internal pure returns(RLPReader.RLPItem[] memory) {
-  for(uint i = 0; i < validators.length; ++i) {
-    RLPReader.RLPItem[] memory validator = validators[i].toList(); 
-    if(keccak256(validator[0].toBytes()) == keccak256(pubKey)) {
-      return validator;
-    }
+  function buildProof(ProofData memory data) internal view returns (MerkleProof memory) {
+    return MerkleProof(
+      ROOT,
+      abi.encodePacked(keccak256(bytes(msg.sender.toHexString()))), 
+      data.proof,
+      0, 
+      0, 
+      data.expectedValue
+    );
   }
-  revert("Validator not found");
-}
 
-receive () external payable {
-}
+  receive () external payable {
+  }
 }
