@@ -15,7 +15,7 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
   uint constant STAKE_FEE = 0.65 ether;
   uint public EPOCH = 0;
   uint public totalStake;
-  bytes32 ROOT = hex'56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'; // Empty
+  bytes32 public ROOT = hex'56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'; // Empty
 
   struct ProofData {
     bytes[] proof;
@@ -87,7 +87,7 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
       tRewards += validator[1].toUint(); 
       tStake += validator[4].toUint();
       claimExit[msg.sender][EPOCH][validator[0].toBytes()] = false;
-      emit ValidatorDeactivated(string(validator[0].toBytes()));
+      emit ValidatorDeactivated(string(pubKeys[i]));
     }
 
     // Send Funds
