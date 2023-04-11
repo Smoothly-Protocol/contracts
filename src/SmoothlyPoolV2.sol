@@ -11,10 +11,11 @@ import "openzeppelin-contracts/utils/cryptography/MerkleProof.sol";
 import "openzeppelin-contracts/access/Ownable.sol";
 
 contract SmoothlyPoolV2 is Ownable {
-  uint constant STAKE_FEE = 0.65 ether;
+  uint constant STAKE_FEE = 0.065 ether;
   uint public epoch = 0;
   bytes32 public withdrawalsRoot;
   bytes32 public exitsRoot;
+  bytes32 public stateRoot = hex'56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'; // Empty
 
   /// @dev Flags registrant on epoch to prevent doble withdrawals 
   mapping(address => mapping(uint => bool)) claimedWithdrawal;
@@ -22,12 +23,11 @@ contract SmoothlyPoolV2 is Ownable {
   mapping(address => mapping(uint => bool)) claimedExit;
 
   event Registered(address indexed eth1, uint[] indexes);
-  event Deactivated(address indexed eth1, uint indexes);
-  event RewardsWithdrawal(address indexed eth1, uint256 value);
-  event StakeWithdrawal(address indexed eth1, uint256 value);
-  event StakeAdded(address indexed eth1, uint indexes, uint256 value);
-  event ExitRequested(address indexed eth1, uint[] indexes, uint epoch);
-  event Epoch(uint indexed epoch, bytes32 withdrawalsRoot, bytes32 exitsRoot);
+  event RewardsWithdrawal(address indexed eth1, uint[] indexes, uint256 value);
+  event StakeWithdrawal(address indexed eth1, uint[] indexes, uint256 value);
+  event StakeAdded(address indexed eth1, uint index, uint256 value);
+  event ExitRequested(address indexed eth1, uint[] indexes);
+  event Epoch(uint indexed epoch, bytes32 withdrawalsRoot, bytes32 exitsRoot, bytes32 stateRoot);
 
   /**
    * @notice Register n amount of validators to the pool
@@ -49,32 +49,34 @@ contract SmoothlyPoolV2 is Ownable {
    * to an eth1 address
    * TODO: Test for reentrancy
    */
-  function withdrawRewards(bytes32[] memory proof, uint rewards) external {
+  function withdrawRewards(bytes32[] memory proof, uint[] memory indexes, uint rewards) external {
     bytes32 leaf = keccak256(bytes.concat(keccak256(
-      abi.encode(
-        msg.sender, 
-        rewards
-    ))));
+            abi.encode(
+              msg.sender, 
+              indexes,
+              rewards
+              ))));
     require(MerkleProof.verify(proof, withdrawalsRoot, leaf), "Incorrect proof");
     require(!claimedWithdrawal[msg.sender][epoch], "Already claimed withdrawal for current epoch");
     claimedWithdrawal[msg.sender][epoch] = true;
     _transfer(msg.sender, rewards);
-    emit RewardsWithdrawal(msg.sender, rewards);
+    emit RewardsWithdrawal(msg.sender, indexes, rewards);
   }
 
   /**
-   * @notice Withdraws stake on exit request
-   * @param proof Merkle Proof
-   * @param stake Amount of stake of all validators that requested exit on
-   * previous epochs
-   * @dev Registrants that don't request an exit of their validators
-   * won't be included
-   * TODO: Test for reentrancy
-   */
-  function withdrawStake(bytes32[] memory proof, uint stake) external {
+  * @notice Withdraws stake on exit request
+  * @param proof Merkle Proof
+  * @param stake Amount of stake of all validators that requested exit on
+  * previous epochs
+  * @dev Registrants that don't request an exit of their validators
+  * won't be included
+  * TODO: Test for reentrancy
+  */
+  function withdrawStake(bytes32[] memory proof, uint[] memory indexes, uint stake) external {
     bytes32 leaf = keccak256(bytes.concat(keccak256(
       abi.encode(
         msg.sender, 
+        indexes,
         stake
     ))));
     require(MerkleProof.verify(proof, exitsRoot, leaf), "Incorrect proof");
@@ -82,23 +84,23 @@ contract SmoothlyPoolV2 is Ownable {
 
     claimedExit[msg.sender][epoch] = true;
     _transfer(msg.sender, stake);
-    emit StakeWithdrawal(msg.sender, stake);
+    emit StakeWithdrawal(msg.sender, indexes, stake);
   }
 
   /**
-   * @notice Allows user to exit pool retrieving stake in next epoch 
-   * @param indexes Validator indexes
-   */
+  * @notice Allows user to exit pool retrieving stake in next epoch 
+  * @param indexes Validator indexes
+  */
   function requestExit(uint[] memory indexes) external {
-    emit ExitRequested(msg.sender, indexes, epoch);
+    emit ExitRequested(msg.sender, indexes);
   }
 
   /**
-   * @notice Adds stake to a validator in the pool 
-   * @param index Validator index
-   * @dev Front-end needs to check for a valid validator call, otherwise funds
-   * will get lost and added as rewards for registrants of the pool
-   */
+  * @notice Adds stake to a validator in the pool 
+  * @param index Validator index
+  * @dev Front-end needs to check for a valid validator call, otherwise funds
+    * will get lost and added as rewards for registrants of the pool
+      */
   function addStake(uint index) external payable {
     require(msg.value > 0, "0 amount");
     require(msg.value <= STAKE_FEE, "Stake fee too big");
@@ -108,15 +110,25 @@ contract SmoothlyPoolV2 is Ownable {
   /** 
   * @notice Updates epoch number and Merkle root hashes 
   * @param _withdrawalsRoot Merkle root hash for withdrawals
-  * @param _exitsRoot Merkle root hash for exits 
-  * TODO: This function will have to be allowed to call by nodes 
+    * @param _exitsRoot Merkle root hash for exits 
+      * @param _stateRoot Merkle Patricia Trie root hash for entire backend state 
+        * @param _fee Fee for processing epoch by node 
+          * TODO: This function will have to be allowed to call by nodes 
   * running our decentralized network. Something similar to chainlink 
   * onlyAuthorized node 
+  * Also, maybe not safe to pass the fee here with this next implementation
   */
-  function updateEpoch(bytes32 _withdrawalsRoot, bytes32 _exitsRoot) external onlyOwner {
+  function updateEpoch(
+    bytes32 _withdrawalsRoot, 
+    bytes32 _exitsRoot,
+    bytes32 _stateRoot,
+    uint _fee
+  ) external onlyOwner {
     withdrawalsRoot = _withdrawalsRoot;
     exitsRoot = _exitsRoot;
-    emit Epoch(epoch++, _withdrawalsRoot, _exitsRoot);
+    stateRoot = _stateRoot;
+    _transfer(owner(), _fee);
+    emit Epoch(epoch++, _withdrawalsRoot, _exitsRoot, _stateRoot);
   }
 
   /// @dev Utility to transfer funds

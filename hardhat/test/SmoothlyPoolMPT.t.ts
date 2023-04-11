@@ -6,7 +6,7 @@ import { ethers } from "hardhat";
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
-const keccak256 = ethers.utils.keccak256;
+import { getProof } from "./utils";
 
 describe("Smoothly Pool MPT version", function () {
   // Fixture initializes @ethereum/trie mpt with 2 users.
@@ -22,7 +22,7 @@ describe("Smoothly Pool MPT version", function () {
     const trie = new Trie({useKeyHashing: true})
     const validator = [
       [
-        "0xaad7124198a7f1c4654dc924449fe7734470db03753b470ff91699cc248870e5f45460691099a68b16bff535d5020d61",
+        38950,
         0,
         0,
         0,
@@ -32,7 +32,7 @@ describe("Smoothly Pool MPT version", function () {
     ]
     const validator2 = [
       [
-        "0x84c48005eaf030a983652d86941ebdc85c19c47c423d0e839e2abfba2aeeec1ced46dd1eb3a24b155a217236f3d4b792",
+        38960,
         0,
         0,
         0,
@@ -234,10 +234,3 @@ describe("Smoothly Pool MPT version", function () {
 
 });
 
-// Utils
-async function getProof(user: any, trie: Trie) {
-  const key = Buffer.from(user.address.toLowerCase());
-  const proof = await trie.createProof(key);
-  const value = await trie.verifyProof(trie.root(), key, proof) as Buffer;
-  return [proof, value];
-}

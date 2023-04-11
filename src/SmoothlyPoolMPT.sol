@@ -5,7 +5,7 @@ import "openzeppelin-contracts/access/Ownable.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
 import "Solidity-RLP/RLPReader.sol";
 import "./MPTVerifier.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract SmoothlyPoolMPT is MPTVerifier, Ownable {
   using RLPReader for RLPReader.RLPItem;
@@ -23,33 +23,25 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
   }
 
   mapping(address => mapping(uint => bool)) claimedWithdrawal;
-  mapping(address => mapping(uint => mapping(bytes => bool))) claimExit;
+  mapping(address => mapping(uint => mapping(uint => bool))) claimExit;
 
-  event ValidatorRegistered(address indexed eth1_addr, string validator);
-  event ValidatorDeactivated(string validator);
-  event Withdrawal(address indexed eth1_addr, string indexed pubKey, uint256 value);
-  event StakeAdded(address indexed eth1_addr, string indexed pubKey, uint256 value);
+  event ValidatorRegistered(address indexed eth1, uint256 validatorIndex);
+  event ValidatorDeactivated(address indexed eth1, uint validatorIndex);
+  event Withdrawal(address indexed eth1, uint validatorIndex, uint256 value);
+  event StakeAdded(address indexed eth1, uint validatorIndex, uint256 value);
 
-  function registerBulk(bytes[] memory pubKeys) external payable {
-    require(msg.value == (STAKE_FEE * pubKeys.length), "not enough eth send");
-    for(uint i; i < pubKeys.length; i++) {
-      register(pubKeys[i]);
+  function registerBulk(uint[] memory validatorIndex) external payable {
+    require(msg.value == (STAKE_FEE * validatorIndex.length), "not enough eth send");
+    for(uint i; i < validatorIndex.length; i++) {
+      totalStake += STAKE_FEE;
+      emit ValidatorRegistered(msg.sender, validatorIndex[i]);
     }	
   }
-
-  function register(bytes memory pubKey) internal {
-    require(pubKey.length == 98, "pubKey with wrong format");
-    require(pubKey[0] == "0", "make sure it uses 0x");
-    require(pubKey[1] == "x", "make sure it uses 0x");
-    totalStake += STAKE_FEE;
-    emit ValidatorRegistered(msg.sender, string(pubKey));
-  }
-
 
   // TODO: Test for reentrancy
   function withdrawRewards(ProofData memory data) external {
     MerkleProof memory proof = buildProof(data); 
-    require(verifyProof(proof), "Validator not registered");
+    require(verifyProof(proof), "Incorrect proof");
     require(!claimedWithdrawal[msg.sender][EPOCH], "Already claimed withdrawal for current epoch");
     RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
     uint tRewards;
@@ -57,11 +49,12 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
     // Calculate rewards for all validators
     for(uint i = 0; i < validators.length; ++i) {
       RLPReader.RLPItem[] memory validator = validators[i].toList(); 
+      require(!claimExit[msg.sender][EPOCH][validator[0].toUint()], "Validator exited on current epoch");
       // Validator needs to be active
       if(validator[5].toBoolean()) {
         uint vRewards = validator[1].toUint();
         tRewards += vRewards;    
-        emit Withdrawal(msg.sender, string(validator[0].toBytes()), vRewards);
+        emit Withdrawal(msg.sender, validator[0].toUint(), vRewards);
       }
     }
 
@@ -73,21 +66,22 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
   }
 
   // TODO: Test for reentrancy
-  function exit(ProofData memory data, bytes[] memory pubKeys) external {
+  function exit(ProofData memory data, uint[] memory indexes) external {
     MerkleProof memory proof = buildProof(data); 
-    require(verifyProof(proof), "Validator not registered");
+    require(verifyProof(proof), "Incorrect proof");
     RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
     uint tRewards;
     uint tStake;
 
     // Exit 
-    for(uint i = 0; i < pubKeys.length; ++i) {
-      RLPReader.RLPItem[] memory validator = findValidator(pubKeys[i], validators); 
-      require(claimExit[msg.sender][EPOCH][validator[0].toBytes()], "Exit not allowed");
+    for(uint i = 0; i < indexes.length; ++i) {
+      RLPReader.RLPItem[] memory validator = findValidator(indexes[i], validators); 
+      require(validator[5].toBoolean(), "Validator is not active yet");
+      require(claimExit[msg.sender][EPOCH][validator[0].toUint()], "Exit not allowed");
       tRewards += validator[1].toUint(); 
       tStake += validator[4].toUint();
-      claimExit[msg.sender][EPOCH][validator[0].toBytes()] = false;
-      emit ValidatorDeactivated(string(pubKeys[i]));
+      claimExit[msg.sender][EPOCH][validator[0].toUint()] = false;
+      emit ValidatorDeactivated(msg.sender, indexes[i]);
     }
 
     // Send Funds
@@ -98,20 +92,20 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
     }
   }
 
-  function reqExit(bytes[] memory pubKeys) external {
-    for(uint i = 0; i < pubKeys.length; ++i) {
-      claimExit[msg.sender][EPOCH + 1][pubKeys[i]] = true;
+  function reqExit(uint[] memory indexes) external {
+    for(uint i = 0; i < indexes.length; ++i) {
+      claimExit[msg.sender][EPOCH + 1][indexes[i]] = true;
     } 
   }
 
-  function addStake(ProofData memory data, bytes memory pubKey) external payable {
+  function addStake(ProofData memory data, uint index) external payable {
     MerkleProof memory proof = buildProof(data); 
-    require(verifyProof(proof), "Validator not registered");
+    require(verifyProof(proof), "Incorrect proof");
     require(msg.value > 0, "0 amount");
     RLPReader.RLPItem[] memory validators = data.expectedValue.toRlpItem().toList();
-    RLPReader.RLPItem[] memory validator = findValidator(pubKey, validators); 
+    RLPReader.RLPItem[] memory validator = findValidator(index, validators); 
     require((msg.value + validator[4].toUint()) <= STAKE_FEE, "Stake fee too big");
-    emit StakeAdded(msg.sender, string(pubKey), msg.value); 
+    emit StakeAdded(msg.sender, index, msg.value); 
   }
 
   function setROOT(bytes32 _root) external onlyOwner {
@@ -120,12 +114,12 @@ contract SmoothlyPoolMPT is MPTVerifier, Ownable {
   }
 
   function findValidator(
-    bytes memory pubKey, 
+    uint index, 
     RLPReader.RLPItem[] memory validators
   ) internal pure returns(RLPReader.RLPItem[] memory) {
     for(uint i = 0; i < validators.length; ++i) {
       RLPReader.RLPItem[] memory validator = validators[i].toList(); 
-      if(keccak256(validator[0].toBytes()) == keccak256(pubKey)) {
+      if(validator[0].toUint() == index) {
         return validator;
       }
     }

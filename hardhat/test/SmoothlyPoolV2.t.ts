@@ -11,29 +11,33 @@ describe("SmoothlyPoolV2", () => {
     pool = await Pool.deploy();
     [owner, acc1, acc2, acc3] = await ethers.getSigners();
     await owner.sendTransaction({
-      value: ethers.utils.parseEther("1"),
+      value: ethers.utils.parseEther("1.6"),
       to: pool.address
     });
     // Merkle Tree data
     values = [
-     [acc1.address, ethers.utils.parseEther("1"), STAKE_FEE, true], 
-     [acc2.address, ethers.utils.parseEther("0.25"), STAKE_FEE, true], 
+     [acc1.address, [100, 300], ethers.utils.parseEther("1.25")], 
+     [acc2.address, [200], ethers.utils.parseEther("0.25")], 
     ];
-    empty = StandardMerkleTree.of([], ["address", "uint256", "uint256", "bool"])
-    console.log(empty.root);
-    tree = StandardMerkleTree.of(values, ["address", "uint256", "uint256", "bool"]);
+    tree = StandardMerkleTree.of(values, ["address", "uint256[]", "uint256"]);
   });
 
-  describe("Registration", () => {
-
-  });
 
   describe("Withdrawal", () => {
     it("Withdraws funds correctly with true proof", async () => {
-      const proof = getProof(tree, acc1.address);
-      const data = values[0].splice(1);
-      await pool.setRoot(tree.root);
-      await pool.connect(acc1).withdrawRewards(proof, data);  
+      const proof = tree.getProof(values[0]); 
+      console.log(proof);
+      await pool.updateEpoch(
+        tree.root, 
+        ethers.utils.formatBytes32String("0x"), 
+        ethers.utils.formatBytes32String("0x"), 
+        ethers.utils.parseEther("0.1")
+      );
+      await pool.connect(acc1).withdrawRewards(
+        proof, 
+        [100, 300],
+        ethers.utils.parseEther("1.25") 
+      );  
     })
   });
 

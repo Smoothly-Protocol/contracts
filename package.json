@@ -46,6 +46,7 @@
   "dependencies": {
     "@ethereumjs/rlp": "^4.0.0",
     "@ethereumjs/trie": "^5.0.2",
+    "@openzeppelin/merkle-tree": "^1.0.3",
     "dotenv": "^16.0.3"
   }
 }
