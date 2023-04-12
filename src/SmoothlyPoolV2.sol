@@ -7,11 +7,11 @@ pragma solidity ^0.8.16;
  * validators evenly and smoothly.
  */
 
-import "openzeppelin-contracts/utils/cryptography/MerkleProof.sol";
-import "openzeppelin-contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SmoothlyPoolV2 is Ownable {
-  uint constant STAKE_FEE = 0.065 ether;
+  uint constant public STAKE_FEE = 0.065 ether;
   uint public epoch = 0;
   bytes32 public withdrawalsRoot;
   bytes32 public exitsRoot;
@@ -51,11 +51,11 @@ contract SmoothlyPoolV2 is Ownable {
    */
   function withdrawRewards(bytes32[] memory proof, uint[] memory indexes, uint rewards) external {
     bytes32 leaf = keccak256(bytes.concat(keccak256(
-            abi.encode(
-              msg.sender, 
-              indexes,
-              rewards
-              ))));
+      abi.encode(
+        msg.sender, 
+        indexes,
+        rewards
+    ))));
     require(MerkleProof.verify(proof, withdrawalsRoot, leaf), "Incorrect proof");
     require(!claimedWithdrawal[msg.sender][epoch], "Already claimed withdrawal for current epoch");
     claimedWithdrawal[msg.sender][epoch] = true;
@@ -99,8 +99,8 @@ contract SmoothlyPoolV2 is Ownable {
   * @notice Adds stake to a validator in the pool 
   * @param index Validator index
   * @dev Front-end needs to check for a valid validator call, otherwise funds
-    * will get lost and added as rewards for registrants of the pool
-      */
+  * will get lost and added as rewards for registrants of the pool
+  */
   function addStake(uint index) external payable {
     require(msg.value > 0, "0 amount");
     require(msg.value <= STAKE_FEE, "Stake fee too big");
@@ -108,16 +108,16 @@ contract SmoothlyPoolV2 is Ownable {
   }
 
   /** 
-  * @notice Updates epoch number and Merkle root hashes 
-  * @param _withdrawalsRoot Merkle root hash for withdrawals
-    * @param _exitsRoot Merkle root hash for exits 
-      * @param _stateRoot Merkle Patricia Trie root hash for entire backend state 
-        * @param _fee Fee for processing epoch by node 
-          * TODO: This function will have to be allowed to call by nodes 
-  * running our decentralized network. Something similar to chainlink 
-  * onlyAuthorized node 
-  * Also, maybe not safe to pass the fee here with this next implementation
-  */
+   * @notice Updates epoch number and Merkle root hashes 
+   * @param _withdrawalsRoot Merkle root hash for withdrawals
+   * @param _exitsRoot Merkle root hash for exits 
+   * @param _stateRoot Merkle Patricia Trie root hash for entire backend state 
+   * @param _fee Fee for processing epoch by node 
+   * TODO: This function will have to be allowed to call by nodes 
+   * running our decentralized network. Something similar to chainlink 
+   * onlyAuthorized node 
+   * Also, maybe not safe to pass the fee here with this next implementation
+   */
   function updateEpoch(
     bytes32 _withdrawalsRoot, 
     bytes32 _exitsRoot,
