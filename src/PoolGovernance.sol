@@ -11,7 +11,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SmoothlyPoolV2} from './SmoothlyPoolV2.sol';
 
 contract PoolGovernance is Ownable {
-  uint constant public epochInterval = 1 weeks;
+  uint constant public epochInterval = 1 days;
   uint constant public votingRatio = 66; // % of agreements required
   uint public epochNumber = 0;
   uint public lastEpoch;

@@ -1,4 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config";
+import "@nomiclabs/hardhat-etherscan";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
 import * as dotenv from 'dotenv'
@@ -21,6 +22,9 @@ const config: HardhatUserConfig = {
     sources: "./src",
     tests: "./test",
     cache: "./cache",
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API
   },
   gasReporter: {
     enabled: true
