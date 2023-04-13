@@ -7,9 +7,8 @@ pragma solidity ^0.8.16;
 /// computed state for every epoch. Reach consensus and pass the data to the
 /// SmoothlyPool contract.
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import './SmoothlyPoolV2.sol';
-import "hardhat/console.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SmoothlyPoolV2} from './SmoothlyPoolV2.sol';
 
 contract PoolGovernance is Ownable {
   uint constant public epochInterval = 1 weeks;

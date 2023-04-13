@@ -7,8 +7,8 @@ pragma solidity ^0.8.16;
  * validators evenly and smoothly.
  */
 
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SmoothlyPoolV2 is Ownable {
   uint constant public STAKE_FEE = 0.065 ether;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.16;
 
-import "solidity-rlp/contracts/RLPReader.sol";
+import {RLPReader} from "solidity-rlp/contracts/RLPReader.sol";
 
 /**
   @title Merkle Patricia Trie Proof Verifier.
