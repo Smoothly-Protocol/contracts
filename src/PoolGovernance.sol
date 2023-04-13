@@ -63,6 +63,7 @@ contract PoolGovernance is Ownable {
   }
 
   /// @notice Gets all active operators 
+  /// @return All active operators
   function getOperators() external view returns(address[] memory) {
     return operators;
   }
@@ -132,6 +133,7 @@ contract PoolGovernance is Ownable {
 
   /// @dev Computes votingRatio
   /// @param count agreements of all operator up to date 
+  /// @return current epoch votingRatio
   function _computeAgreements(uint count) private view returns(uint) {
     return (count * 100) / operators.length; 
   }
@@ -139,6 +141,7 @@ contract PoolGovernance is Ownable {
   /// @dev Compare to votes 
   /// @param vote1 Epoch data of other operator 
   /// @param vote2 Epoch data of caller 
+  /// @return equality in boolean
   function _isVoteEqual(Epoch memory vote1, Epoch memory vote2) private pure returns(bool) {
     if(keccak256(abi.encode(vote1)) == keccak256(abi.encode(vote2))){
       return true;

@@ -3,31 +3,27 @@ pragma solidity ^0.8.16;
 
 import {RLPReader} from "solidity-rlp/contracts/RLPReader.sol";
 
-/**
-  @title Merkle Patricia Trie Proof Verifier.
-  @author Noah Figueras.
-  @notice You can use this contract to verify any MPT Proof.
-  @dev Used specifically to verify proofs from @ethereumjs/trie.
-  @custom:experimental This still is an experimental contract.
+/// @title Merkle Patricia Trie Proof Verifier.
+/// @author Noah Figueras.
+/// @notice You can use this contract to verify any MPT Proof.
+/// @dev Used specifically to verify proofs from @ethereumjs/trie.
+/// @custom:experimental This still is an experimental contract.
 
-  Documentation:
-  - https://github.com/pipeos-one/goldengate/blob/master/contracts/contracts/lib/MPT.sol
-  - https://easythereentropy.wordpress.com/2014/06/04/understanding-the-ethereum-trie/
-  - https://ouvrard-pierre-alain.medium.com/merkle-proof-verification-for-ethereum-patricia-tree-48f29658eec
-*/
+///  Documentation:
+///  - https://github.com/pipeos-one/goldengate/blob/master/contracts/contracts/lib/MPT.sol
+///  - https://easythereentropy.wordpress.com/2014/06/04/understanding-the-ethereum-trie/
+///  - https://ouvrard-pierre-alain.medium.com/merkle-proof-verification-for-ethereum-patricia-tree-48f29658eec
 
 contract MPTVerifier {
   using RLPReader for RLPReader.RLPItem;
   using RLPReader for bytes;
 
-  /**
-    @param expectedRoot MPT root.
-    @param key keccak256 encoded key of value.
-    @param proof Proof of key/value pair from MPT.
-    @param keyIndex used for recursion on the key.
-    @param proofIndex used for recursion on the proof.
-    @param expectedValue RLP encoded value.
-  */
+  /// @param expectedRoot MPT root.
+  /// @param key keccak256 encoded key of value.
+  /// @param proof Proof of key/value pair from MPT.
+  /// @param keyIndex used for recursion on the key.
+  /// @param proofIndex used for recursion on the proof.
+  /// @param expectedValue RLP encoded value.
   struct MerkleProof {
     bytes32 expectedRoot;
     bytes key;
@@ -37,10 +33,8 @@ contract MPTVerifier {
     bytes expectedValue;
   }
 
-  /**
-    @param data The paramaters needed for MPT verification.
-    @return true if the proof is correct.  
-  */
+  /// @param data The paramaters needed for MPT verification.
+  /// @return true if the proof is correct.  
   function verifyProof(MerkleProof memory data) public returns (bool) {
     bytes memory node = data.proof[data.proofIndex];
     RLPReader.RLPItem[] memory dec = node.toRlpItem().toList();
@@ -113,11 +107,9 @@ contract MPTVerifier {
     return data.expectedValue.length == 0 ? true : false;
   }
 
-  /**
-    @dev Conversion of node from bytes to nibbles
-    @param _key node in bytes 
-    @return nibbles array of bytes 
-  */
+  /// @dev Conversion of node from bytes to nibbles
+  /// @param _key node in bytes 
+  /// @return nibbles array of bytes 
   function bufferToNibbles(bytes memory _key) private pure returns(bytes1[] memory nibbles) {
     nibbles = new bytes1[](_key.length * 2);
     for(uint i = 0; i < _key.length; i++) {
@@ -128,25 +120,21 @@ contract MPTVerifier {
     }
   }
 
-  /**
-    @dev Slices array of nibbles
-    @param _key nibbles
-    @param start starting point in the array 
-    @return result concatenated bytes of nibbles
-  */
+  /// @dev Slices array of nibbles
+  /// @param _key nibbles
+  /// @param start starting point in the array 
+  /// @return result concatenated bytes of nibbles
   function slice(bytes1[] memory _key, uint start) private pure returns(bytes memory result) {
     for(uint i = start; i < _key.length; i++) {
       result = abi.encodePacked(result, _key[i]); 
     }
   }
 
-  /**
-    @dev Slices array of nibbles
-    @param _key nibbles
-    @param start starting point in the array 
-    @param end ending point in the array 
-    @return result concatenated bytes of nibbles
-  */
+  /// @dev Slices array of nibbles
+  /// @param _key nibbles
+  /// @param start starting point in the array 
+  /// @param end ending point in the array 
+  /// @return result concatenated bytes of nibbles
   function slice(bytes1[] memory _key, uint start, uint end) private pure returns(bytes memory result) {
     for(uint i = start; i < end; i++) {
       result = abi.encodePacked(result, _key[i]); 
