@@ -1,5 +1,4 @@
-# ![1500x500 smoothly](https://user-images.githubusercontent.com/106842341/233216098-c26c079b-1ce2-48d4-99e0-d85ae924d513.jpeg)
-
+![1128 x 191](https://user-images.githubusercontent.com/106842341/233216304-4035a364-2733-4029-9b4c-c33b7cfab2b5.jpeg)
 
 # 
 **tldr:** 
