@@ -5,7 +5,7 @@ import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
 describe("PoolGovernance", () => {
   const week = 7 * 24 * 60 * 60;
-  let owner, acc1, acc2, acc3, operator1, operator2, operator3;
+  let owner, acc1, acc2, acc3, operator1, operator2, operator3, operator4, operator5, operator6;
   let pool, governance;
   let withdrawals, exits, state, fee;
 
@@ -16,7 +16,7 @@ describe("PoolGovernance", () => {
     governance = await Governance.deploy(pool.address);
     pool.transferOwnership(governance.address);
 
-    [owner, acc1, acc2, acc3, operator1, operator2, operator3] = await ethers.getSigners();
+    [owner, acc1, acc2, acc3, operator1, operator2, operator3, operator4, operator5, operator6] = await ethers.getSigners();
     await owner.sendTransaction({
       value: ethers.utils.parseEther("1"),
       to: pool.address
@@ -150,6 +150,53 @@ describe("PoolGovernance", () => {
         ethers.utils.parseEther("1").sub(fee)
       );
     });
+
+    it("propose epoch with 6 operators agree at least 4", async () => {
+      await governance.addOperators([
+        operator1.address,
+        operator2.address,
+        operator3.address,
+        operator4.address,
+        operator5.address,
+        operator6.address
+      ]);
+      await time.increase(week);
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.connect(operator2).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.connect(operator3).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.connect(operator4).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      expect(await governance.getRewards(operator1.address)).to.equal(fee.div(6));
+      expect(await governance.getRewards(operator2.address)).to.equal(fee.div(6));
+      expect(await governance.getRewards(operator3.address)).to.equal(fee.div(6));
+      expect(await governance.getRewards(operator4.address)).to.equal(fee.div(6));
+      expect(await governance.getRewards(operator5.address)).to.equal(fee.div(6));
+      expect(await governance.getRewards(operator6.address)).to.equal(fee.div(6));
+      expect(await governance.epochNumber()).to.equal(1);
+      expect(await ethers.provider.getBalance(governance.address)).to.equal(fee);
+      expect(await ethers.provider.getBalance(pool.address)).to.equal(
+        ethers.utils.parseEther("1").sub(fee)
+      );
+    });
   });
 
   describe("Withdrawals", () => {
@@ -227,6 +274,36 @@ describe("PoolGovernance", () => {
       for(let operator of operators.slice(0,3)) {
         expect(await governance.isOperator(operator)).to.equal(false);
       }
+    });
+
+    it("transfers Ownership of Pool", async() => {
+      await governance.transferPoolOwnership(owner.address);
+      await time.increase(week);
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance.connect(operator2).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance.connect(operator3).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await expect(governance.connect(acc1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])).to.be.revertedWith("Ownable: caller is not the owner");
+      expect(await pool.owner()).to.equal(owner.address);
     });
   });
 });

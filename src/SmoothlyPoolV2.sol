@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT 
+// SPDX License identifier: Apache-2.0
 pragma solidity ^0.8.16;
 
 /// @title Smoothing Pool V2 Contract.
@@ -25,7 +25,7 @@ contract SmoothlyPoolV2 is Ownable {
   event StakeWithdrawal(address indexed eth1, uint[] indexes, uint256 value);
   event StakeAdded(address indexed eth1, uint index, uint256 value);
   event ExitRequested(address indexed eth1, uint[] indexes);
-  event Epoch(uint indexed epoch, bytes32 withdrawalsRoot, bytes32 exitsRoot, bytes32 stateRoot);
+  event Epoch(bytes32 stateRoot);
 
   receive () external payable {
   }
@@ -111,7 +111,8 @@ contract SmoothlyPoolV2 is Ownable {
     exitsRoot = _exitsRoot;
     stateRoot = _stateRoot;
     _transfer(owner(), _fee);
-    emit Epoch(epoch++, _withdrawalsRoot, _exitsRoot, _stateRoot);
+    epoch++;
+    emit Epoch(_stateRoot);
   }
 
   /// @dev Utility to transfer funds

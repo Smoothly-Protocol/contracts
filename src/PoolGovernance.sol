@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT 
+//SPDX License identifier: Apache-2.0
 pragma solidity ^0.8.16;
 
 /// @title Smoothing Pool Governance Contract
@@ -8,7 +8,7 @@ pragma solidity ^0.8.16;
 /// SmoothlyPool contract.
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {SmoothlyPoolV2} from './SmoothlyPoolV2.sol';
+import {ISmoothlyPoolV2} from './interfaces/ISmoothlyPoolV2.sol';
 
 contract PoolGovernance is Ownable {
   uint constant public epochInterval = 1 days;
@@ -16,7 +16,7 @@ contract PoolGovernance is Ownable {
   uint public epochNumber = 0;
   uint public lastEpoch;
   address[] public operators;
-  SmoothlyPoolV2 immutable pool;
+  ISmoothlyPoolV2 immutable pool;
 
   /// @notice Epoch data to update the Smoothly Pool state
   /// @param withdrwals Merkle root hash for withdrawals
@@ -55,7 +55,7 @@ contract PoolGovernance is Ownable {
 
   constructor(address payable _pool) {
     lastEpoch = block.timestamp;
-    pool = SmoothlyPoolV2(_pool);
+    pool = ISmoothlyPoolV2(_pool);
   }
 
   /// @dev Recieves fees from Smoothly Pool
@@ -123,6 +123,12 @@ contract PoolGovernance is Ownable {
       isOperator[_operators[i]] = false;
       _remove(_operators[i]);
     }
+  }
+
+  /// @notice Transfers Ownership of Smoothly Pool
+  /// @param newOwner owner to transfer ownership to 
+  function transferPoolOwnership(address newOwner) onlyOwner external {
+    pool.transferOwnership(newOwner);
   }
 
   /// @notice Gets cumulative rewards from a single operator
