@@ -46,9 +46,10 @@
   "dependencies": {
     "@ethereumjs/rlp": "^4.0.0",
     "@ethereumjs/trie": "^5.0.2",
-    "@openzeppelin/contracts": "^4.8.2",
+    "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/merkle-tree": "^1.0.3",
     "dotenv": "^16.0.3",
-    "solidity-rlp": "^2.0.7"
+    "solidity-rlp": "^2.0.7",
+    "yarn-upgrade-all": "^0.7.2"
   }
 }
