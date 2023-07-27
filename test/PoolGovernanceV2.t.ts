@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
-describe("PoolGovernance", () => {
+describe("PoolGovernanceV2", () => {
   const week = 7 * 24 * 60 * 60;
   let owner, acc1, acc2, acc3, operator1, operator2, operator3, operator4, operator5, operator6;
   let pool, governance;
@@ -11,7 +11,7 @@ describe("PoolGovernance", () => {
 
   beforeEach(async () => {
     const Pool = await ethers.getContractFactory("SmoothlyPoolV2");
-    const Governance = await ethers.getContractFactory("PoolGovernance");
+    const Governance = await ethers.getContractFactory("PoolGovernanceV2");
     pool = await Pool.deploy();
     governance = await Governance.deploy(pool.address);
     pool.transferOwnership(governance.address);
@@ -87,6 +87,25 @@ describe("PoolGovernance", () => {
       );
     });
 
+    it("propose epoch - not ready to _computeEpoch", async () => {
+      await governance.addOperators([
+        operator1.address,
+        operator2.address
+      ]);
+      await time.increase(week);
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      expect(
+        await governance.getRewards(operator1.address)
+      ).to.equal(0);
+      expect(await ethers.provider.getBalance(governance.address)).to.equal(0);
+      expect(await governance.epochNumber()).to.equal(0);
+    });
+
     it("propose epoch with 3 operators don't agree", async () => {
       await governance.addOperators([
         operator1.address,
@@ -106,7 +125,42 @@ describe("PoolGovernance", () => {
         ethers.utils.formatBytes32String('lol'),
         fee
       ]);
-      await governance.connect(operator2).proposeEpoch([
+      await governance.connect(operator3).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        ethers.utils.formatBytes32String('wack'),
+        fee
+      ]);
+      expect(await governance.getRewards(operator1.address)).to.equal(0);
+      expect(await governance.getRewards(operator2.address)).to.equal(0);
+      expect(await governance.getRewards(operator3.address)).to.equal(0);
+      expect(await governance.epochNumber()).to.equal(0);
+      expect(await ethers.provider.getBalance(governance.address)).to.equal(0);
+      expect(await ethers.provider.getBalance(pool.address)).to.equal(
+        ethers.utils.parseEther("1")
+      );
+    });
+
+    it("propose epoch with 3 operators - avoid empty votes", async () => {
+      await governance.addOperators([
+        operator1.address,
+        operator2.address,
+        operator3.address
+      ]);
+      await time.increase(week);
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        ethers.utils.formatBytes32String('lol'),
+        fee
+      ]);
+      await governance.connect(operator1).proposeEpoch([
         withdrawals.root,
         exits.root,
         ethers.utils.formatBytes32String('wack'),
@@ -139,6 +193,12 @@ describe("PoolGovernance", () => {
         withdrawals.root,
         exits.root,
         state,
+        fee
+      ]);
+      await governance.connect(operator3).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        ethers.utils.formatBytes32String("I'm wack"),
         fee
       ]);
       expect(await governance.getRewards(operator1.address)).to.equal(fee.div(3));
@@ -185,6 +245,18 @@ describe("PoolGovernance", () => {
         state,
         fee
       ]);
+      await governance.connect(operator5).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        ethers.utils.formatBytes32String("YOLO"),
+        fee
+      ]);
+      await governance.connect(operator6).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        ethers.utils.formatBytes32String("Hacked"),
+        fee
+      ]);
       expect(await governance.getRewards(operator1.address)).to.equal(fee.div(6));
       expect(await governance.getRewards(operator2.address)).to.equal(fee.div(6));
       expect(await governance.getRewards(operator3.address)).to.equal(fee.div(6));
@@ -221,6 +293,12 @@ describe("PoolGovernance", () => {
         fee
       ]);
       await governance.connect(operator2).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.connect(operator3).proposeEpoch([
         withdrawals.root,
         exits.root,
         state,
@@ -297,7 +375,19 @@ describe("PoolGovernance", () => {
         state,
         fee
       ])
-      await expect(governance.connect(acc1).proposeEpoch([
+      await governance.connect(acc1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance.connect(acc2).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await expect(governance.connect(acc3).proposeEpoch([
         withdrawals.root,
         exits.root,
         state,
