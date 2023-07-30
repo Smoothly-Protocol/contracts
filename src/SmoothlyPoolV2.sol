@@ -1,32 +1,39 @@
 // Copyright 2022-2023 Smoothly Protocol LLC
 // SPDX License identifier: Apache-2.0
-pragma solidity ^0.8.16;
+pragma solidity 0.8.19;
 
 /// @title Smoothing Pool V2 Contract.
-/// @notice This contract recieves and distributes all the rewards from registered 
+/// @notice This contract receives and distributes all the rewards from registered 
 /// validators evenly and smoothly.
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SmoothlyPoolV2 is Ownable {
-  uint constant public STAKE_FEE = 0.065 ether;
-  uint public epoch = 0;
+  uint64 constant internal STAKE_FEE = 0.065 ether;
+  uint64 public epoch = 0;
   bytes32 public withdrawalsRoot;
   bytes32 public exitsRoot;
   bytes32 public stateRoot = hex'56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'; // Empty
 
-  /// @dev Flags registrant on epoch to prevent doble withdrawals 
-  mapping(address => mapping(uint => bool)) claimedWithdrawal;
-  /// @dev Flags registrant on epoch to prevent doble exits
-  mapping(address => mapping(uint => bool)) claimedExit;
+  /// @dev Flags registrant on epoch to prevent double withdrawals 
+  mapping(address => mapping(uint64 => bool)) claimedWithdrawal;
+  /// @dev Flags registrant on epoch to prevent double exits
+  mapping(address => mapping(uint64 => bool)) claimedExit;
 
-  event Registered(address indexed eth1, uint[] indexes);
-  event RewardsWithdrawal(address indexed eth1, uint[] indexes, uint256 value);
-  event StakeWithdrawal(address indexed eth1, uint[] indexes, uint256 value);
-  event StakeAdded(address indexed eth1, uint index, uint256 value);
-  event ExitRequested(address indexed eth1, uint[] indexes);
-  event Epoch(bytes32 stateRoot);
+  event Registered(address indexed eth1, uint64[] indexes);
+  event RewardsWithdrawal(address indexed eth1, uint64[] indexes, uint256 value);
+  event StakeWithdrawal(address indexed eth1, uint64[] indexes, uint256 value);
+  event StakeAdded(address indexed eth1, uint64 index, uint256 value);
+  event ExitRequested(address indexed eth1, uint64[] indexes);
+  event Epoch(uint64 indexed epoch, bytes32 stateRoot, uint256 fee);
+
+  error NotEnoughEth();
+  error IncorrectProof();
+  error AlreadyClaimed();
+  error ZeroAmount();
+  error CallTransferFailed();
+  error AmountTooBig();
 
   receive () external payable {
   }
@@ -37,24 +44,24 @@ contract SmoothlyPoolV2 is Ownable {
   /// This is intended to be called from the front-end, double checking
   /// for ownership. Anyone registering unowned validators will lose their staking
   /// funds and those will be distributed amongst the pool registrants.
-  function registerBulk(uint[] memory indexes) external payable {
-    require(msg.value == (STAKE_FEE * indexes.length), "not enough eth send");
+  function registerBulk(uint64[] calldata indexes) external payable {
+    if(msg.value != (STAKE_FEE * indexes.length)) revert NotEnoughEth();
     emit Registered(msg.sender, indexes);
   }
 
   /// @notice Withdraw rewards from the pool
   /// @param proof Merkle Proof
-  /// @param rewards All rewards acumulated from all validators associated 
+  /// @param rewards All rewards accumulated from all validators associated 
   /// to an eth1 address
-  function withdrawRewards(bytes32[] memory proof, uint[] memory indexes, uint rewards) external {
+  function withdrawRewards(bytes32[] calldata proof, uint64[] calldata indexes, uint256 rewards) external {
     bytes32 leaf = keccak256(bytes.concat(keccak256(
       abi.encode(
         msg.sender, 
         indexes,
         rewards
     ))));
-    require(MerkleProof.verify(proof, withdrawalsRoot, leaf), "Incorrect proof");
-    require(!claimedWithdrawal[msg.sender][epoch], "Already claimed withdrawal for current epoch");
+    if(!MerkleProof.verify(proof, withdrawalsRoot, leaf)) revert IncorrectProof();
+    if(claimedWithdrawal[msg.sender][epoch]) revert AlreadyClaimed();
     claimedWithdrawal[msg.sender][epoch] = true;
     _transfer(msg.sender, rewards);
     emit RewardsWithdrawal(msg.sender, indexes, rewards);
@@ -66,15 +73,15 @@ contract SmoothlyPoolV2 is Ownable {
   /// previous epochs
   /// @dev Registrants that don't request an exit of their validators
   /// won't be included
-  function withdrawStake(bytes32[] memory proof, uint[] memory indexes, uint stake) external {
+  function withdrawStake(bytes32[] calldata proof, uint64[] calldata indexes, uint256 stake) external {
     bytes32 leaf = keccak256(bytes.concat(keccak256(
       abi.encode(
         msg.sender, 
         indexes,
         stake
     ))));
-    require(MerkleProof.verify(proof, exitsRoot, leaf), "Incorrect proof");
-    require(!claimedExit[msg.sender][epoch], "Already claimed exit for current epoch");
+    if(!MerkleProof.verify(proof, exitsRoot, leaf)) revert IncorrectProof();
+    if(claimedExit[msg.sender][epoch]) revert AlreadyClaimed();
 
     claimedExit[msg.sender][epoch] = true;
     _transfer(msg.sender, stake);
@@ -83,7 +90,7 @@ contract SmoothlyPoolV2 is Ownable {
 
   /// @notice Allows user to exit pool retrieving stake in next epoch 
   /// @param indexes Validator indexes
-  function requestExit(uint[] memory indexes) external {
+  function requestExit(uint64[] calldata indexes) external {
     emit ExitRequested(msg.sender, indexes);
   }
 
@@ -91,9 +98,9 @@ contract SmoothlyPoolV2 is Ownable {
   /// @param index Validator index
   /// @dev Front-end needs to check for a valid validator call, otherwise funds
   /// will get lost and added as rewards for registrants of the pool
-  function addStake(uint index) external payable {
-    require(msg.value > 0, "0 amount");
-    require(msg.value <= STAKE_FEE, "Stake fee too big");
+  function addStake(uint64 index) external payable {
+    if(msg.value == 0) revert ZeroAmount();
+    if(msg.value > STAKE_FEE) revert AmountTooBig();
     emit StakeAdded(msg.sender, index, msg.value); 
   }
 
@@ -106,22 +113,22 @@ contract SmoothlyPoolV2 is Ownable {
     bytes32 _withdrawalsRoot, 
     bytes32 _exitsRoot,
     bytes32 _stateRoot,
-    uint _fee
+    uint256 _fee
   ) external onlyOwner {
     withdrawalsRoot = _withdrawalsRoot;
     exitsRoot = _exitsRoot;
     stateRoot = _stateRoot;
     _transfer(owner(), _fee);
     epoch++;
-    emit Epoch(_stateRoot);
+    emit Epoch(epoch, _stateRoot, _fee);
   }
 
   /// @dev Utility to transfer funds
   /// @param recipient address of recipient
-  /// @param amount amount being transfered 
-  function _transfer(address recipient, uint amount) private {
-    require(amount > 0, "Account balance is 0");
+  /// @param amount amount being transferred 
+  function _transfer(address recipient, uint256 amount) private {
+    if(amount == 0) revert ZeroAmount();
     (bool sent, ) = payable(recipient).call{value: amount, gas: 2300}("");
-    require(sent, "Failed to send Ether");
+    if(!sent) revert CallTransferFailed();
   }
 }

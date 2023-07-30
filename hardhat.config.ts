@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
       accounts: [process.env.OWNER]
     }
   },
-  solidity: "0.8.16",
+  solidity: "0.8.19",
   paths: {
     sources: "./src",
     tests: "./test",

@@ -1,6 +1,6 @@
 // Copyright 2022-2023 Smoothly Protocol LLC
 // SPDX License identifier: Apache-2.0
-pragma solidity ^0.8.16;
+pragma solidity 0.8.19;
 
 /// @title Smoothing Pool Governance Contract
 /// @notice This contract is in charge of recieving votes from operator 

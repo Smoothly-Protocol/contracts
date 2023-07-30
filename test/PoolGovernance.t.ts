@@ -65,7 +65,7 @@ describe("PoolGovernance", () => {
         exits.root,
         state,
         ethers.utils.parseEther("2")
-      ])).to.be.revertedWith("Failed to send Ether");
+      ])).to.be.revertedWithCustomError(pool, 'CallTransferFailed');
     });
 
     it("propose epoch with only one operator", async () => {
@@ -204,7 +204,7 @@ describe("PoolGovernance", () => {
       await governance.addOperators([operator1.address]);
       await expect(
         governance.connect(operator1).withdrawRewards()
-      ).to.be.revertedWith("Account balance is 0");
+      ).to.be.revertedWithCustomError(governance, 'ZeroAmount');
     });
 
     it("withdraws rewards correctly", async () => {
