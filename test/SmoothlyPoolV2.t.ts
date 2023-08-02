@@ -16,8 +16,8 @@ describe("SmoothlyPoolV2", () => {
     });
     // Merkle Tree data
     values = [
-     [acc1.address, [100, 300], ethers.utils.parseEther("1.25")], 
-     [acc2.address, [200], ethers.utils.parseEther("0.25")], 
+      [acc1.address, [100, 300], ethers.utils.parseEther("1.25")], 
+      [acc2.address, [200], ethers.utils.parseEther("0.25")], 
     ];
     tree = StandardMerkleTree.of(values, ["address", "uint256[]", "uint256"]);
   });
