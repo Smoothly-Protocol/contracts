@@ -7,7 +7,7 @@ describe("SmoothlyPoolV2", () => {
   const STAKE_FEE = ethers.utils.parseEther("0.65");
 
   beforeEach(async () => {
-    const Pool = await ethers.getContractFactory("SmoothlyPoolV2");
+    const Pool = await ethers.getContractFactory("SmoothlyPool");
     pool = await Pool.deploy();
     [owner, acc1, acc2, acc3] = await ethers.getSigners();
     await owner.sendTransaction({

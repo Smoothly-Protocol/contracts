@@ -2,7 +2,7 @@
 // SPDX License identifier: Apache-2.0
 pragma solidity 0.8.19;
 
-interface ISmoothlyPoolV2 {
+interface ISmoothlyPool {
 
   /// @notice Updates epoch number and Merkle root hashes 
   /// @param _withdrawalsRoot Merkle root hash for withdrawals

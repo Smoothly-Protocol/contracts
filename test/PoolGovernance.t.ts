@@ -10,7 +10,7 @@ describe("PoolGovernance", () => {
   let withdrawals, exits, state, fee;
 
   beforeEach(async () => {
-    const Pool = await ethers.getContractFactory("SmoothlyPoolV2");
+    const Pool = await ethers.getContractFactory("SmoothlyPool");
     const Governance = await ethers.getContractFactory("PoolGovernance");
     pool = await Pool.deploy();
     governance = await Governance.deploy(pool.address);

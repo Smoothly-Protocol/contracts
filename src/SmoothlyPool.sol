@@ -9,7 +9,7 @@ pragma solidity 0.8.19;
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract SmoothlyPoolV2 is Ownable {
+contract SmoothlyPool is Ownable {
     uint64 internal constant STAKE_FEE = 0.065 ether;
     uint64 public epoch;
     bytes32 public withdrawalsRoot;
