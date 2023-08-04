@@ -73,7 +73,7 @@ contract PoolGovernance is Ownable {
     /// @notice withdraws accumulated rewards from an operator
     function withdrawRewards() external onlyOperator {
         address operator = msg.sender;
-        uint256 rewards = getRewards(operator);
+        uint256 rewards = operatorRewards[operator];
         operatorRewards[operator] = 0;
         _transfer(operator, rewards);
     }
@@ -89,10 +89,10 @@ contract PoolGovernance is Ownable {
         votes[epochNumber][msg.sender] = epoch;
         uint256 count = 0;
         address[] memory _operators = operators;
-        for (uint256 i = 0; i < _operators.length; i++) {
+        for (uint256 i = 0; i < _operators.length; ++i) {
             Epoch memory vote = votes[epochNumber][_operators[i]];
             if (_isVoteEqual(vote, epoch)) {
-                count += 1;
+                ++count;
             }
             if (_computeAgreements(count) >= votingRatio) {
                 pool.updateEpoch(
@@ -112,7 +112,7 @@ contract PoolGovernance is Ownable {
     /// @notice Adds operators
     /// @param _operators List of new operators
     function addOperators(address[] calldata _operators) external onlyOwner {
-        for (uint256 i = 0; i < _operators.length; i++) {
+        for (uint256 i = 0; i < _operators.length; ++i) {
             if (isOperator[_operators[i]])
                 revert ExistingOperator(_operators[i]);
             isOperator[_operators[i]] = true;
@@ -123,7 +123,7 @@ contract PoolGovernance is Ownable {
     /// @notice Deletes operators
     /// @param _operators List of operators to be removed
     function deleteOperators(address[] calldata _operators) external onlyOwner {
-        for (uint256 i = 0; i < _operators.length; i++) {
+        for (uint256 i = 0; i < _operators.length; ++i) {
             isOperator[_operators[i]] = false;
             _remove(_operators[i]);
         }
@@ -133,12 +133,6 @@ contract PoolGovernance is Ownable {
     /// @param newOwner owner to transfer ownership to
     function transferPoolOwnership(address newOwner) external onlyOwner {
         pool.transferOwnership(newOwner);
-    }
-
-    /// @notice Gets cumulative rewards from a single operator
-    /// @param operator address of operator
-    function getRewards(address operator) public view returns (uint256) {
-        return operatorRewards[operator];
     }
 
     /// @dev Computes votingRatio
@@ -156,10 +150,7 @@ contract PoolGovernance is Ownable {
         Epoch memory vote1,
         Epoch calldata vote2
     ) private pure returns (bool) {
-        if (keccak256(abi.encode(vote1)) == keccak256(abi.encode(vote2))) {
-            return true;
-        }
-        return false;
+        return keccak256(abi.encode(vote1)) == keccak256(abi.encode(vote2));
     }
 
     /// @dev Distributes rewards equally for all active operators
@@ -170,7 +161,7 @@ contract PoolGovernance is Ownable {
         address[] memory _operators
     ) private {
         uint256 operatorShare = fee / _operators.length;
-        for (uint256 i = 0; i < _operators.length; i++) {
+        for (uint256 i = 0; i < _operators.length; ++i) {
             operatorRewards[_operators[i]] += operatorShare;
         }
     }
@@ -180,7 +171,7 @@ contract PoolGovernance is Ownable {
     /// @param operator address of operator
     function _remove(address operator) private {
         address[] memory _operators = operators;
-        for (uint256 i = 0; i < _operators.length; i++) {
+        for (uint256 i = 0; i < _operators.length; ++i) {
             if (_operators[i] == operator) {
                 operators[i] = _operators[_operators.length - 1];
                 operators.pop();
@@ -194,7 +185,7 @@ contract PoolGovernance is Ownable {
     /// @param amount amount being transferred
     function _transfer(address recipient, uint256 amount) private {
         if (amount == 0) revert ZeroAmount();
-        (bool sent, ) = payable(recipient).call{value: amount, gas: 2300}("");
+        (bool sent, ) = recipient.call{value: amount, gas: 2300}("");
         if (!sent) revert CallTransferFailed();
     }
 }

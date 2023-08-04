@@ -78,7 +78,7 @@ describe("PoolGovernance", () => {
         fee
       ]);
       expect(
-        await governance.getRewards(operator1.address)
+        await governance.operatorRewards(operator1.address)
       ).to.equal(fee);
       expect(await ethers.provider.getBalance(governance.address)).to.equal(fee);
       expect(await governance.epochNumber()).to.equal(1);
@@ -112,9 +112,9 @@ describe("PoolGovernance", () => {
         ethers.utils.formatBytes32String('wack'),
         fee
       ]);
-      expect(await governance.getRewards(operator1.address)).to.equal(0);
-      expect(await governance.getRewards(operator2.address)).to.equal(0);
-      expect(await governance.getRewards(operator3.address)).to.equal(0);
+      expect(await governance.operatorRewards(operator1.address)).to.equal(0);
+      expect(await governance.operatorRewards(operator2.address)).to.equal(0);
+      expect(await governance.operatorRewards(operator3.address)).to.equal(0);
       expect(await governance.epochNumber()).to.equal(0);
       expect(await ethers.provider.getBalance(governance.address)).to.equal(0);
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
@@ -141,9 +141,9 @@ describe("PoolGovernance", () => {
         state,
         fee
       ]);
-      expect(await governance.getRewards(operator1.address)).to.equal(fee.div(3));
-      expect(await governance.getRewards(operator2.address)).to.equal(fee.div(3));
-      expect(await governance.getRewards(operator3.address)).to.equal(fee.div(3));
+      expect(await governance.operatorRewards(operator1.address)).to.equal(fee.div(3));
+      expect(await governance.operatorRewards(operator2.address)).to.equal(fee.div(3));
+      expect(await governance.operatorRewards(operator3.address)).to.equal(fee.div(3));
       expect(await governance.epochNumber()).to.equal(1);
       expect(await ethers.provider.getBalance(governance.address)).to.equal(fee);
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
@@ -185,12 +185,12 @@ describe("PoolGovernance", () => {
         state,
         fee
       ]);
-      expect(await governance.getRewards(operator1.address)).to.equal(fee.div(6));
-      expect(await governance.getRewards(operator2.address)).to.equal(fee.div(6));
-      expect(await governance.getRewards(operator3.address)).to.equal(fee.div(6));
-      expect(await governance.getRewards(operator4.address)).to.equal(fee.div(6));
-      expect(await governance.getRewards(operator5.address)).to.equal(fee.div(6));
-      expect(await governance.getRewards(operator6.address)).to.equal(fee.div(6));
+      expect(await governance.operatorRewards(operator1.address)).to.equal(fee.div(6));
+      expect(await governance.operatorRewards(operator2.address)).to.equal(fee.div(6));
+      expect(await governance.operatorRewards(operator3.address)).to.equal(fee.div(6));
+      expect(await governance.operatorRewards(operator4.address)).to.equal(fee.div(6));
+      expect(await governance.operatorRewards(operator5.address)).to.equal(fee.div(6));
+      expect(await governance.operatorRewards(operator6.address)).to.equal(fee.div(6));
       expect(await governance.epochNumber()).to.equal(1);
       expect(await ethers.provider.getBalance(governance.address)).to.equal(fee);
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
@@ -229,9 +229,9 @@ describe("PoolGovernance", () => {
       await governance.connect(operator1).withdrawRewards()
       await governance.connect(operator2).withdrawRewards()
       await governance.connect(operator3).withdrawRewards()
-      expect(await governance.getRewards(operator1.address)).to.equal(0);
-      expect(await governance.getRewards(operator2.address)).to.equal(0);
-      expect(await governance.getRewards(operator3.address)).to.equal(0);
+      expect(await governance.operatorRewards(operator1.address)).to.equal(0);
+      expect(await governance.operatorRewards(operator2.address)).to.equal(0);
+      expect(await governance.operatorRewards(operator3.address)).to.equal(0);
       // Rounding Precision loss of 1 wei here 
       //expect(await ethers.provider.getBalance(governance.address)).to.equal(0);
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
