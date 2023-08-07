@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ISmoothlyPool} from "./interfaces/ISmoothlyPool.sol";
+import {SmoothlyPool} from "./SmoothlyPool.sol";
 
 /// @title Smoothing Pool Governance Contract
 /// @notice This contract is in charge of receiving votes from operator
@@ -17,7 +17,7 @@ contract PoolGovernance is Ownable {
     uint64 public epochNumber;
     uint64 public lastEpoch;
     address[] public operators;
-    ISmoothlyPool immutable pool;
+    SmoothlyPool public pool;
 
     /// @notice Epoch data to update the Smoothly Pool state
     /// @param withdrawals Merkle root hash for withdrawals
@@ -56,9 +56,9 @@ contract PoolGovernance is Ownable {
         _;
     }
 
-    constructor(ISmoothlyPool _pool) {
+    constructor() {
         lastEpoch = uint64(block.timestamp);
-        pool = _pool;
+        pool = new SmoothlyPool();
     }
 
     /// @dev Receives fees from Smoothly Pool

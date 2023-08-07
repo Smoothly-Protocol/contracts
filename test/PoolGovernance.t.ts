@@ -12,9 +12,8 @@ describe("PoolGovernance", () => {
   beforeEach(async () => {
     const Pool = await ethers.getContractFactory("SmoothlyPool");
     const Governance = await ethers.getContractFactory("PoolGovernance");
-    pool = await Pool.deploy();
-    governance = await Governance.deploy(pool.address);
-    pool.transferOwnership(governance.address);
+    governance = await Governance.deploy();
+    pool = Pool.attach(await governance.pool());
 
     [owner, acc1, acc2, acc3, operator1, operator2, operator3, operator4, operator5, operator6] = await ethers.getSigners();
     await owner.sendTransaction({
