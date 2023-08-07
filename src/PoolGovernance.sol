@@ -1,15 +1,15 @@
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2022-2023 Smoothly Protocol LLC
-// SPDX License identifier: Apache-2.0
 pragma solidity 0.8.19;
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ISmoothlyPool} from "./interfaces/ISmoothlyPool.sol";
 
 /// @title Smoothing Pool Governance Contract
 /// @notice This contract is in charge of receiving votes from operator
 /// nodes with the respective withdrawals, exits and state root hashes of the
 /// computed state for every epoch. Reach consensus and pass the data to the
 /// SmoothlyPool contract.
-
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ISmoothlyPool} from "./interfaces/ISmoothlyPool.sol";
 
 contract PoolGovernance is Ownable {
     uint32 internal constant epochInterval = 1 days;
@@ -56,9 +56,9 @@ contract PoolGovernance is Ownable {
         _;
     }
 
-    constructor(address payable _pool) {
+    constructor(ISmoothlyPool _pool) {
         lastEpoch = uint64(block.timestamp);
-        pool = ISmoothlyPool(_pool);
+        pool = _pool;
     }
 
     /// @dev Receives fees from Smoothly Pool
@@ -72,10 +72,9 @@ contract PoolGovernance is Ownable {
 
     /// @notice withdraws accumulated rewards from an operator
     function withdrawRewards() external onlyOperator {
-        address operator = msg.sender;
-        uint256 rewards = operatorRewards[operator];
-        operatorRewards[operator] = 0;
-        _transfer(operator, rewards);
+        uint256 rewards = operatorRewards[msg.sender];
+        operatorRewards[msg.sender] = 0;
+        _transfer(msg.sender, rewards);
     }
 
     /// @notice Proposal Data for current epoch computed from every operator
@@ -84,13 +83,14 @@ contract PoolGovernance is Ownable {
     /// have the abilities to delete malicious operators
     /// @param epoch Data needed to update Smoothly Pool state
     function proposeEpoch(Epoch calldata epoch) external onlyOperator {
-        if (block.timestamp < (lastEpoch + epochInterval))
+        if (block.timestamp < lastEpoch + epochInterval)
             revert EpochTimelockNotReached();
         votes[epochNumber][msg.sender] = epoch;
         uint256 count = 0;
-        address[] memory _operators = operators;
-        for (uint256 i = 0; i < _operators.length; ++i) {
-            Epoch memory vote = votes[epochNumber][_operators[i]];
+        address[] storage _operators = operators;
+        uint256 operatorsLen = _operators.length;
+        for (uint256 i = 0; i < operatorsLen; ++i) {
+            Epoch storage vote = votes[epochNumber][_operators[i]];
             if (_isVoteEqual(vote, epoch)) {
                 ++count;
             }
@@ -113,8 +113,8 @@ contract PoolGovernance is Ownable {
     /// @param _operators List of new operators
     function addOperators(address[] calldata _operators) external onlyOwner {
         for (uint256 i = 0; i < _operators.length; ++i) {
-            if (isOperator[_operators[i]])
-                revert ExistingOperator(_operators[i]);
+            bool exists = isOperator[_operators[i]];
+            if (exists) revert ExistingOperator(_operators[i]);
             isOperator[_operators[i]] = true;
             operators.push(_operators[i]);
         }
@@ -170,10 +170,10 @@ contract PoolGovernance is Ownable {
     /// empty space
     /// @param operator address of operator
     function _remove(address operator) private {
-        address[] memory _operators = operators;
-        for (uint256 i = 0; i < _operators.length; ++i) {
-            if (_operators[i] == operator) {
-                operators[i] = _operators[_operators.length - 1];
+        uint256 operatorsLen = operators.length;
+        for (uint256 i = 0; i < operatorsLen; ++i) {
+            if (operators[i] == operator) {
+                operators[i] = operators[operatorsLen - 1];
                 operators.pop();
                 break;
             }

@@ -1,13 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2022-2023 Smoothly Protocol LLC
-// SPDX License identifier: Apache-2.0
 pragma solidity 0.8.19;
+
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title Smoothing Pool V2 Contract.
 /// @notice This contract receives and distributes all the rewards from registered
 /// validators evenly and smoothly.
-
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SmoothlyPool is Ownable {
     uint64 internal constant STAKE_FEE = 0.065 ether;
@@ -66,11 +66,17 @@ contract SmoothlyPool is Ownable {
         uint64[] calldata indexes,
         uint256 rewards
     ) external {
-        bytes32 leaf = keccak256(
-            bytes.concat(keccak256(abi.encode(msg.sender, indexes, rewards)))
-        );
-        if (!MerkleProof.verify(proof, withdrawalsRoot, leaf))
-            revert IncorrectProof();
+        if (
+            !MerkleProof.verify(
+                proof,
+                withdrawalsRoot,
+                keccak256(
+                    bytes.concat(
+                        keccak256(abi.encode(msg.sender, indexes, rewards))
+                    )
+                )
+            )
+        ) revert IncorrectProof();
         if (claimedWithdrawal[msg.sender][epoch]) revert AlreadyClaimed();
         claimedWithdrawal[msg.sender][epoch] = true;
         _transfer(msg.sender, rewards);
@@ -88,11 +94,17 @@ contract SmoothlyPool is Ownable {
         uint64[] calldata indexes,
         uint256 stake
     ) external {
-        bytes32 leaf = keccak256(
-            bytes.concat(keccak256(abi.encode(msg.sender, indexes, stake)))
-        );
-        if (!MerkleProof.verify(proof, exitsRoot, leaf))
-            revert IncorrectProof();
+        if (
+            !MerkleProof.verify(
+                proof,
+                exitsRoot,
+                keccak256(
+                    bytes.concat(
+                        keccak256(abi.encode(msg.sender, indexes, stake))
+                    )
+                )
+            )
+        ) revert IncorrectProof();
         if (claimedExit[msg.sender][epoch]) revert AlreadyClaimed();
 
         claimedExit[msg.sender][epoch] = true;
