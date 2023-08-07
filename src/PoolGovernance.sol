@@ -17,7 +17,7 @@ contract PoolGovernance is Ownable {
     uint64 public epochNumber;
     uint64 public lastEpoch;
     address[] public operators;
-    SmoothlyPool public pool;
+    SmoothlyPool immutable public pool;
 
     /// @notice Epoch data to update the Smoothly Pool state
     /// @param withdrawals Merkle root hash for withdrawals
