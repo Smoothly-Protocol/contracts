@@ -14,8 +14,9 @@ contract SmoothlyPool is Ownable {
     uint64 public epoch;
     bytes32 public withdrawalsRoot;
     bytes32 public exitsRoot;
+    /// @dev Empty root hash with no values in it
     bytes32 public stateRoot =
-        hex"56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"; // Empty
+        hex"56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
 
     /// @dev Flags registrant on epoch to prevent double withdrawals
     mapping(address => mapping(uint64 => bool)) claimedWithdrawal;
@@ -59,6 +60,7 @@ contract SmoothlyPool is Ownable {
 
     /// @notice Withdraw rewards from the pool
     /// @param proof Merkle Proof
+    /// @param indexes Validator indexes
     /// @param rewards All rewards accumulated from all validators associated
     /// to an eth1 address
     function withdrawRewards(
@@ -85,6 +87,7 @@ contract SmoothlyPool is Ownable {
 
     /// @notice Withdraws stake on exit request
     /// @param proof Merkle Proof
+    /// @param indexes Validator indexes
     /// @param stake Amount of stake of all validators that requested exit on
     /// previous epochs
     /// @dev Registrants that don't request an exit of their validators
@@ -142,7 +145,7 @@ contract SmoothlyPool is Ownable {
         withdrawalsRoot = _withdrawalsRoot;
         exitsRoot = _exitsRoot;
         stateRoot = _stateRoot;
-        _transfer(owner(), _fee);
+        _transfer(msg.sender, _fee);
         ++epoch;
         emit Epoch(epoch, _stateRoot, _fee);
     }

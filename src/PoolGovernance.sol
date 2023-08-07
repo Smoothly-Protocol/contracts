@@ -28,7 +28,7 @@ contract PoolGovernance is Ownable {
         bytes32 withdrawals;
         bytes32 exits;
         bytes32 state;
-        uint fee;
+        uint256 fee;
     }
 
     /// @dev checks if operator is active
@@ -36,7 +36,7 @@ contract PoolGovernance is Ownable {
     /// @dev records operator accumulative rewards
     mapping(address => uint256) public operatorRewards;
     /// @dev records operator votes for each epochNumber
-    mapping(uint => mapping(address => Epoch)) public votes;
+    mapping(uint256 => mapping(address => Epoch)) public votes;
 
     error ExistingOperator(address operator);
     error Unauthorized();
@@ -113,8 +113,8 @@ contract PoolGovernance is Ownable {
     /// @param _operators List of new operators
     function addOperators(address[] calldata _operators) external onlyOwner {
         for (uint256 i = 0; i < _operators.length; ++i) {
-            bool exists = isOperator[_operators[i]];
-            if (exists) revert ExistingOperator(_operators[i]);
+            if (isOperator[_operators[i]])
+                revert ExistingOperator(_operators[i]);
             isOperator[_operators[i]] = true;
             operators.push(_operators[i]);
         }
