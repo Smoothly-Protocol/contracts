@@ -8,7 +8,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @title Smoothing Pool V2 Contract.
 /// @notice This contract receives and distributes all the rewards from registered
 /// validators evenly and smoothly.
-
 contract SmoothlyPool is Ownable {
     uint64 internal constant STAKE_FEE = 0.065 ether;
     uint64 public epoch;

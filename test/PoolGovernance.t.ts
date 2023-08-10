@@ -48,6 +48,12 @@ describe("PoolGovernance", () => {
 
     it("reverts on epoch timelock not reached", async () => {
       await governance.addOperators([operator1.address]);
+      /*await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee 
+      ]);*/
       await expect(governance.connect(operator1).proposeEpoch([
         withdrawals.root,
         exits.root,

@@ -10,14 +10,13 @@ import {SmoothlyPool} from "./SmoothlyPool.sol";
 /// nodes with the respective withdrawals, exits and state root hashes of the
 /// computed state for every epoch. Reach consensus and pass the data to the
 /// SmoothlyPool contract.
-
 contract PoolGovernance is Ownable {
     uint32 internal constant epochInterval = 1 days;
     uint8 internal constant votingRatio = 66; // % of agreements required
     uint64 public epochNumber;
     uint64 public lastEpoch;
     address[] public operators;
-    SmoothlyPool immutable public pool;
+    SmoothlyPool public immutable pool;
 
     /// @notice Epoch data to update the Smoothly Pool state
     /// @param withdrawals Merkle root hash for withdrawals
@@ -36,7 +35,9 @@ contract PoolGovernance is Ownable {
     /// @dev records operator accumulative rewards
     mapping(address => uint256) public operatorRewards;
     /// @dev records operator votes for each epochNumber
-    mapping(uint256 => mapping(address => Epoch)) public votes;
+    mapping(uint256 => mapping(address => bytes32)) public votes;
+    /// @dev counts number of votes for each epochNumber
+    mapping(uint256 => mapping(bytes32 => uint256)) public voteCounter;
 
     error ExistingOperator(address operator);
     error Unauthorized();
@@ -83,29 +84,25 @@ contract PoolGovernance is Ownable {
     /// have the abilities to delete malicious operators
     /// @param epoch Data needed to update Smoothly Pool state
     function proposeEpoch(Epoch calldata epoch) external onlyOperator {
-        if (block.timestamp < lastEpoch + epochInterval)
-            revert EpochTimelockNotReached();
-        votes[epochNumber][msg.sender] = epoch;
-        uint256 count = 0;
-        address[] storage _operators = operators;
-        uint256 operatorsLen = _operators.length;
-        for (uint256 i = 0; i < operatorsLen; ++i) {
-            Epoch storage vote = votes[epochNumber][_operators[i]];
-            if (_isVoteEqual(vote, epoch)) {
-                ++count;
-            }
-            if (_computeAgreements(count) >= votingRatio) {
-                pool.updateEpoch(
-                    epoch.withdrawals,
-                    epoch.exits,
-                    epoch.state,
-                    epoch.fee
-                );
-                _distributeRewards(epoch.fee, _operators);
-                ++epochNumber;
-                lastEpoch = uint64(block.timestamp);
-                break;
-            }
+        if (block.timestamp < lastEpoch + epochInterval) revert EpochTimelockNotReached();
+
+        bytes32 vote = keccak256(abi.encode(epoch));
+        bytes32 prevVote = votes[epochNumber][msg.sender];
+        uint256 count = ++voteCounter[epochNumber][vote];
+        votes[epochNumber][msg.sender] = vote;
+
+        if (prevVote != bytes32(0)) --voteCounter[epochNumber][prevVote];
+
+        if ((count * 100 / operators.length) >= votingRatio) {
+            pool.updateEpoch(
+                epoch.withdrawals,
+                epoch.exits,
+                epoch.state,
+                epoch.fee
+            );
+            _distributeRewards(epoch.fee, operators);
+            ++epochNumber;
+            lastEpoch = uint64(block.timestamp);
         }
     }
 
@@ -133,24 +130,6 @@ contract PoolGovernance is Ownable {
     /// @param newOwner owner to transfer ownership to
     function transferPoolOwnership(address newOwner) external onlyOwner {
         pool.transferOwnership(newOwner);
-    }
-
-    /// @dev Computes votingRatio
-    /// @param count agreements of all operator up to date
-    /// @return current epoch votingRatio
-    function _computeAgreements(uint256 count) private view returns (uint256) {
-        return (count * 100) / operators.length;
-    }
-
-    /// @dev Compare to votes
-    /// @param vote1 Epoch data of other operator
-    /// @param vote2 Epoch data of caller
-    /// @return equality in boolean
-    function _isVoteEqual(
-        Epoch memory vote1,
-        Epoch calldata vote2
-    ) private pure returns (bool) {
-        return keccak256(abi.encode(vote1)) == keccak256(abi.encode(vote2));
     }
 
     /// @dev Distributes rewards equally for all active operators
