@@ -75,7 +75,10 @@ contract PoolGovernance is Ownable {
     function withdrawRewards() external onlyOperator {
         uint256 rewards = operatorRewards[msg.sender];
         operatorRewards[msg.sender] = 0;
-        _transfer(msg.sender, rewards);
+
+        if (rewards == 0) revert ZeroAmount();
+        (bool sent, ) = msg.sender.call{value: rewards, gas: 2300}("");
+        if (!sent) revert CallTransferFailed();
     }
 
     /// @notice Proposal Data for current epoch computed from every operator
@@ -84,23 +87,32 @@ contract PoolGovernance is Ownable {
     /// have the abilities to delete malicious operators
     /// @param epoch Data needed to update Smoothly Pool state
     function proposeEpoch(Epoch calldata epoch) external onlyOperator {
-        if (block.timestamp < lastEpoch + epochInterval) revert EpochTimelockNotReached();
+        if (block.timestamp < lastEpoch + epochInterval)
+            revert EpochTimelockNotReached();
 
         bytes32 vote = keccak256(abi.encode(epoch));
         bytes32 prevVote = votes[epochNumber][msg.sender];
         uint256 count = ++voteCounter[epochNumber][vote];
+        uint256 operatorsLen = operators.length;
+
         votes[epochNumber][msg.sender] = vote;
 
         if (prevVote != bytes32(0)) --voteCounter[epochNumber][prevVote];
 
-        if ((count * 100 / operators.length) >= votingRatio) {
+        if (((count * 100) / operatorsLen) >= votingRatio) {
             pool.updateEpoch(
                 epoch.withdrawals,
                 epoch.exits,
                 epoch.state,
                 epoch.fee
             );
-            _distributeRewards(epoch.fee, operators);
+
+            uint256 operatorShare = epoch.fee / operatorsLen;
+            address[] memory _operators = operators;
+            for (uint256 i = 0; i < operatorsLen; ++i) {
+                operatorRewards[_operators[i]] += operatorShare;
+            }
+
             ++epochNumber;
             lastEpoch = uint64(block.timestamp);
         }
@@ -122,7 +134,14 @@ contract PoolGovernance is Ownable {
     function deleteOperators(address[] calldata _operators) external onlyOwner {
         for (uint256 i = 0; i < _operators.length; ++i) {
             isOperator[_operators[i]] = false;
-            _remove(_operators[i]);
+            uint256 operatorsLen = operators.length;
+            for (uint256 x = 0; x < operatorsLen; ++x) {
+                if (operators[x] == _operators[x]) {
+                    operators[x] = operators[operatorsLen - 1];
+                    operators.pop();
+                    break;
+                }
+            }
         }
     }
 
@@ -130,41 +149,5 @@ contract PoolGovernance is Ownable {
     /// @param newOwner owner to transfer ownership to
     function transferPoolOwnership(address newOwner) external onlyOwner {
         pool.transferOwnership(newOwner);
-    }
-
-    /// @dev Distributes rewards equally for all active operators
-    /// @param fee coming from Smoothly Pool for operators
-    /// @param _operators active
-    function _distributeRewards(
-        uint256 fee,
-        address[] memory _operators
-    ) private {
-        uint256 operatorShare = fee / _operators.length;
-        for (uint256 i = 0; i < _operators.length; ++i) {
-            operatorRewards[_operators[i]] += operatorShare;
-        }
-    }
-
-    /// @dev Utility to remove an operator from operators array without
-    /// empty space
-    /// @param operator address of operator
-    function _remove(address operator) private {
-        uint256 operatorsLen = operators.length;
-        for (uint256 i = 0; i < operatorsLen; ++i) {
-            if (operators[i] == operator) {
-                operators[i] = operators[operatorsLen - 1];
-                operators.pop();
-                break;
-            }
-        }
-    }
-
-    /// @dev Utility to transfer funds
-    /// @param recipient address of recipient
-    /// @param amount amount being transferred
-    function _transfer(address recipient, uint256 amount) private {
-        if (amount == 0) revert ZeroAmount();
-        (bool sent, ) = recipient.call{value: amount, gas: 2300}("");
-        if (!sent) revert CallTransferFailed();
     }
 }
