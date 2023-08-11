@@ -51,19 +51,15 @@ contract PoolGovernance is Ownable {
         _;
     }
 
-    /// @dev restrict calls only to Smoothly Pool
-    modifier onlyPool() {
-        if (msg.sender != address(pool)) revert Unauthorized();
-        _;
-    }
-
     constructor() {
         lastEpoch = uint64(block.timestamp);
         pool = new SmoothlyPool();
     }
 
     /// @dev Receives fees from Smoothly Pool
-    receive() external payable onlyPool {}
+    receive() external payable {
+        if (msg.sender != address(pool)) revert Unauthorized();
+    }
 
     /// @notice Gets all active operators
     /// @return All active operators

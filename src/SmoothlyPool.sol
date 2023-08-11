@@ -87,8 +87,8 @@ contract SmoothlyPool is Ownable {
     /// @notice Withdraws stake on exit request
     /// @param proof Merkle Proof
     /// @param indexes Validator indexes
-    /// @param stake Amount of stake of all validators that requested exit on
-    /// previous epochs
+    /// @param stake Amount of stake of all validators associated to an eth1 
+    /// address that requested exit on previous epochs
     /// @dev Registrants that don't request an exit of their validators
     /// won't be included
     function withdrawStake(
