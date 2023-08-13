@@ -202,6 +202,27 @@ describe("PoolGovernance", () => {
         ethers.utils.parseEther("1").sub(fee)
       );
     });
+
+		it("Operators can't cast an extra vote to get voting majority", async () => {
+			await governance.addOperators([
+				operator1.address,
+				operator2.address,
+				operator3.address,
+			]);
+			await time.increase(week);
+			await governance
+				.connect(operator1)
+				.proposeEpoch([withdrawals.root, exits.root, state, fee]);
+
+			expect(await governance.epochNumber()).to.equal(0);
+			// operator1 casts a second vote to get 66% vote ratio
+			await governance
+				.connect(operator1)
+				.proposeEpoch([withdrawals.root, exits.root, state, fee]);
+
+			// validate that the epoch increased (vote passed)
+			expect(await governance.epochNumber()).to.equal(0);
+		});
   });
 
   describe("Withdrawals", () => {

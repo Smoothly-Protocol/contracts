@@ -88,13 +88,13 @@ contract PoolGovernance is Ownable {
 
         bytes32 vote = keccak256(abi.encode(epoch));
         bytes32 prevVote = votes[epochNumber][msg.sender];
-        uint256 count = ++voteCounter[epochNumber][vote];
         uint256 operatorsLen = operators.length;
 
         votes[epochNumber][msg.sender] = vote;
 
         if (prevVote != bytes32(0)) --voteCounter[epochNumber][prevVote];
 
+        uint256 count = ++voteCounter[epochNumber][vote];
         if (((count * 100) / operatorsLen) >= votingRatio) {
             pool.updateEpoch(
                 epoch.withdrawals,
