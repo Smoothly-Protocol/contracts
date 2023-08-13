@@ -154,7 +154,7 @@ contract SmoothlyPool is Ownable {
     /// @param amount amount being transferred
     function _transfer(address recipient, uint256 amount) private {
         if (amount == 0) revert ZeroAmount();
-        (bool sent, ) = recipient.call{value: amount, gas: 2300}("");
+        (bool sent, ) = recipient.call{value: amount}("");
         if (!sent) revert CallTransferFailed();
     }
 }

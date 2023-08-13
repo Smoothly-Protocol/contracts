@@ -73,7 +73,7 @@ contract PoolGovernance is Ownable {
         operatorRewards[msg.sender] = 0;
 
         if (rewards == 0) revert ZeroAmount();
-        (bool sent, ) = msg.sender.call{value: rewards, gas: 2300}("");
+        (bool sent, ) = msg.sender.call{value: rewards}("");
         if (!sent) revert CallTransferFailed();
     }
 
