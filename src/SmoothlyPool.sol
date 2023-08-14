@@ -10,6 +10,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// validators evenly and smoothly.
 contract SmoothlyPool is Ownable {
     uint64 internal constant STAKE_FEE = 0.065 ether;
+    uint64 internal constant MAX_ADD_FEE = 0.015 ether;
     uint64 public epoch;
     bytes32 public withdrawalsRoot;
     bytes32 public exitsRoot;
@@ -127,7 +128,7 @@ contract SmoothlyPool is Ownable {
     /// registrants of the pool
     function addStake(uint64 index) external payable {
         if (msg.value == 0) revert ZeroAmount();
-        if (msg.value > STAKE_FEE) revert AmountTooBig();
+        if (msg.value > MAX_ADD_FEE) revert AmountTooBig();
         emit StakeAdded(msg.sender, index, msg.value);
     }
 
