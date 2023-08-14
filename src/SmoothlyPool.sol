@@ -122,8 +122,9 @@ contract SmoothlyPool is Ownable {
 
     /// @notice Adds stake to a validator in the pool
     /// @param index Validator index
-    /// @dev Front-end needs to check for a valid validator call, otherwise funds
-    /// will get lost and added as rewards for registrants of the pool
+    /// @dev Front-end needs to check for a valid validator call and a valid
+    /// amount, otherwise funds will get lost and added as rewards for 
+    /// registrants of the pool
     function addStake(uint64 index) external payable {
         if (msg.value == 0) revert ZeroAmount();
         if (msg.value > STAKE_FEE) revert AmountTooBig();

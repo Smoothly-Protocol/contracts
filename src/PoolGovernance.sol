@@ -135,6 +135,13 @@ contract PoolGovernance is Ownable {
                 if (operators[x] == _operators[x]) {
                     operators[x] = operators[operatorsLen - 1];
                     operators.pop();
+                    // Transfer rewards to pool
+                    uint256 rewards = operatorRewards[_operators[x]];
+                    operatorRewards[_operators[x]] = 0;
+                    if (rewards != 0) {
+                      (bool sent, ) = address(pool).call{value: rewards}("");
+                      if (!sent) revert CallTransferFailed();
+                    }
                     break;
                 }
             }

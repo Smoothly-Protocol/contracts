@@ -233,6 +233,28 @@ describe("PoolGovernance", () => {
       ).to.be.revertedWithCustomError(governance, 'ZeroAmount');
     });
 
+    it("operator rewards should be transferred to pool on deletion", async () => {
+      await governance.addOperators([operator1.address]);
+      await time.increase(week);
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.deleteOperators([operator1.address]);
+      expect(
+        await governance.operatorRewards(operator1.address)
+      ).to.equal(0);
+      expect(await ethers.provider.getBalance(governance.address)).to.equal(0);
+      expect(await governance.epochNumber()).to.equal(1);
+      expect(await ethers.provider.getBalance(pool.address)).to.equal(
+        ethers.utils.parseEther("1").sub(fee).add(fee)
+      );
+      await expect(governance.connect(operator1).withdrawRewards())
+        .to.be.revertedWithCustomError(governance, 'Unauthorized');
+    });
+
     it("withdraws rewards correctly", async () => {
       await governance.addOperators([
         operator1.address,
