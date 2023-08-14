@@ -62,10 +62,28 @@ describe("PoolGovernance", () => {
       ])).to.be.revertedWithCustomError(governance, 'EpochTimelockNotReached');
     });
 
-    it("reverts on pool balance < fee", async () => {
+    it("reverts on only one operator", async () => {
       await governance.addOperators([operator1.address]);
       await time.increase(week);
       await expect(governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee 
+      ])).to.be.revertedWithCustomError(governance, 'NotEnoughOperators');
+    });
+
+
+    it("reverts on pool balance < fee", async () => {
+      await governance.addOperators([operator1.address, operator2.address]);
+      await time.increase(week);
+      await governance.connect(operator1).proposeEpoch([
+          withdrawals.root,
+          exits.root,
+          state,
+          ethers.utils.parseEther("2")
+      ]);
+      await expect(governance.connect(operator2).proposeEpoch([
         withdrawals.root,
         exits.root,
         state,
@@ -73,6 +91,7 @@ describe("PoolGovernance", () => {
       ])).to.be.revertedWithCustomError(pool, 'CallTransferFailed');
     });
 
+    /*
     it("propose epoch with only one operator", async () => {
       await governance.addOperators([operator1.address]);
       await time.increase(week);
@@ -90,7 +109,7 @@ describe("PoolGovernance", () => {
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
         ethers.utils.parseEther("1").sub(fee)
       );
-    });
+    });*/
 
     it("propose epoch with 3 operators don't agree", async () => {
       await governance.addOperators([
@@ -234,9 +253,15 @@ describe("PoolGovernance", () => {
     });
 
     it("operator rewards should be transferred to pool on deletion", async () => {
-      await governance.addOperators([operator1.address]);
+      await governance.addOperators([operator1.address, operator2.address]);
       await time.increase(week);
       await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ]);
+      await governance.connect(operator2).proposeEpoch([
         withdrawals.root,
         exits.root,
         state,
@@ -246,10 +271,10 @@ describe("PoolGovernance", () => {
       expect(
         await governance.operatorRewards(operator1.address)
       ).to.equal(0);
-      expect(await ethers.provider.getBalance(governance.address)).to.equal(0);
+      expect(await ethers.provider.getBalance(governance.address)).to.equal(fee.div(2));
       expect(await governance.epochNumber()).to.equal(1);
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
-        ethers.utils.parseEther("1").sub(fee).add(fee)
+        ethers.utils.parseEther("1").sub(fee).add(fee.div(2))
       );
       await expect(governance.connect(operator1).withdrawRewards())
         .to.be.revertedWithCustomError(governance, 'Unauthorized');

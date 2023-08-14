@@ -44,6 +44,7 @@ contract PoolGovernance is Ownable {
     error EpochTimelockNotReached();
     error ZeroAmount();
     error CallTransferFailed();
+    error NotEnoughOperators();
 
     /// @dev restrict calls only to operators
     modifier onlyOperator() {
@@ -89,6 +90,8 @@ contract PoolGovernance is Ownable {
         bytes32 vote = keccak256(abi.encode(epoch));
         bytes32 prevVote = votes[epochNumber][msg.sender];
         uint256 operatorsLen = operators.length;
+
+        if(operatorsLen == 1) revert NotEnoughOperators();
 
         votes[epochNumber][msg.sender] = vote;
 
