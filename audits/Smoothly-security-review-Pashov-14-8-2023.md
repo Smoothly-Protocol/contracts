@@ -45,9 +45,9 @@ Operators & Validators should only be added/registered at the beginning of new e
 
 # Security Assessment Summary
 
-**_review commit hash_ - [082020d559af75e0acb8fff33f104b2ec3ef15ea](https://github.com/Smoothly-Protocol/contracts/tree/082020d559af75e0acb8fff33f104b2ec3ef15ea)**
+**_review commit hash_ - [400acaff945f8e41a0ede64e711deb69438d5a2c](https://github.com/Smoothly-Protocol/contracts/tree/400acaff945f8e41a0ede64e711deb69438d5a2c)**
 
-**_fixes review commit hash_ - [fffffffff](url)**
+**_fixes review commit hash_ - [028ba5e7eda683f60efd7867d18d1a32f6f16376](https://github.com/Smoothly-Protocol/contracts/tree/028ba5e7eda683f60efd7867d18d1a32f6f16376)**
 
 ### Scope
 
@@ -60,18 +60,18 @@ The following smart contracts were in scope of the audit:
 
 # Findings Summary
 
-| ID     | Title                                                                                 | Severity | Status |
-| ------ | ------------------------------------------------------------------------------------- | -------- | ------ |
-| [C-01] | Operators can cast an extra vote to get voting majority                               | Critical | TBD    |
-| [H-01] | Operator can still claim rewards after being removed from governance                  | High     | TBD    |
-| [H-02] | Large centralization attack surface                                                   | High     | TBD    |
-| [M-01] | Operator might be unable to withdraw rewards due to gas limit                         | Medium   | TBD    |
-| [M-02] | The stake fees are not tracked on chain                                               | Medium   | TBD    |
-| [L-01] | Disallow epoch proposals when `operators.length == 1`                                 | Low      | TBD    |
-| [L-02] | Small ETH dust amount will be left in `PoolGovernance`                                | Low      | TBD    |
-| [L-03] | The `epoch` should be a part of the leafs in the `withdrawals` & `exits` Merkle trees | Low      | TBD    |
-| [L-04] | Methods are not following the Checks-Effects-Interactions pattern                     | Low      | TBD    |
-| [L-05] | State-changing methods are missing event emissions                                    | Low      | TBD    |
+| ID     | Title                                                                                 | Severity | Status       |
+| ------ | ------------------------------------------------------------------------------------- | -------- | ------------ |
+| [C-01] | Operators can cast an extra vote to get voting majority                               | Critical | Fixed        |
+| [C-02] | Operator can still claim rewards after being removed from governance                  | High     | Fixed        |
+| [H-01] | Large centralization attack surface                                                   | High     | Acknowledged |
+| [M-01] | Operator might be unable to withdraw rewards due to gas limit                         | Medium   | Fixed        |
+| [M-02] | The stake fees are not tracked on chain                                               | Medium   | Acknowledged |
+| [L-01] | Disallow epoch proposals when `operators.length == 1`                                 | Low      | Fixed        |
+| [L-02] | Small ETH dust amount will be left in `PoolGovernance`                                | Low      | Acknowledged |
+| [L-03] | The `epoch` should be a part of the leafs in the `withdrawals` & `exits` Merkle trees | Low      | Acknowledged |
+| [L-04] | Methods are not following the Checks-Effects-Interactions pattern                     | Low      | Fixed        |
+| [L-05] | State-changing methods are missing event emissions                                    | Low      | Acknowledged |
 
 # Detailed Findings
 
@@ -151,25 +151,25 @@ if (prevVote != bytes32(0)) --voteCounter[epochNumber][prevVote];
 + uint256 count = ++voteCounter[epochNumber][vote];
 ```
 
-# [H-01] Operator can still claim rewards after being removed from governance
+# [C-02] Operator can still claim rewards after being removed from governance
 
 ## Severity
 
 **Impact:**
-High, as rewards shouldn't be claimable for operators that are not part of the governance
+High, as rewards shouldn't be claimable for operators that were removed from governance
 
 **Likelihood:**
-Medium, as it requires the operator to be removed as a slashing/punishment
+High, as this will happen every time this functionality is used and an operator has unclaimed rewards
 
 ## Description
 
-The `deleteOperators` method removes an operator account from the `PoolGovernance` but it still leaves the `operatorRewards` mapping untouched, meaning even if an operator is acting maliciously and is removed he can still claim his accrued rewards. This shouldn't be the case, as they should be slashed. Also if an operator becomes inactive, even if he is removed, his unclaimed rewards will be stuck in the contract with the current implementation.
+The `deleteOperators` method removes an operator account from the `PoolGovernance` but it still leaves the `operatorRewards` mapping untouched, meaning even if an operator is acting maliciously and is removed he can still claim his accrued rewards. This shouldn't be the case, as this functionality is used when operators must be slashed. Also if an operator becomes inactive, even if he is removed, his unclaimed rewards will be stuck in the contract with the current implementation.
 
 ## Recommendations
 
 On operator removal transfer the operator rewards to a chosen account, for example the `SmoothlyPool`.
 
-# [H-02] Large centralization attack surface
+# [H-01] Large centralization attack surface
 
 ## Severity
 
