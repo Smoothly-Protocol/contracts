@@ -146,8 +146,8 @@ contract SmoothlyPool is Ownable {
         withdrawalsRoot = _withdrawalsRoot;
         exitsRoot = _exitsRoot;
         stateRoot = _stateRoot;
-        _transfer(msg.sender, _fee);
         ++epoch;
+        _transfer(msg.sender, _fee);
         emit Epoch(epoch, _stateRoot, _fee);
     }
 
