@@ -24,9 +24,9 @@ Operators & Validators should only be added/registered at the beginning of new e
 
 ## Privileged Roles & Actors
 
-- Smoothly Pool owner - can set the `withdrawals`, `exists` and `state` Merkle tree roots as well as withdraw a `fee` amount from the pool, the `PoolGovernance` contract will hold this role
+- Smoothly Pool owner - can set the `withdrawals`, `exits` and `state` Merkle tree roots as well as withdraw a `fee` amount from the pool, the `PoolGovernance` contract will hold this role
 - Pool Governance owner - can manage pool operators and transfer pool ownership
-- Pool Governance operator - can propose new `withdrawals`, `exists` and `state` Merkle tree roots as well as a `fee` to be distributed amongst all operators
+- Pool Governance operator - can propose new `withdrawals`, `exits` and `state` Merkle tree roots as well as a `fee` to be distributed amongst all operators
 - Registered validator - can claim pool rewards and/or exit the pool
 
 # Severity classification
