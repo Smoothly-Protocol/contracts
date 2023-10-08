@@ -5,6 +5,14 @@ import "hardhat-gas-reporter";
 import * as dotenv from 'dotenv'
 dotenv.config()
 
+import { deployer } from './scripts/deploy';
+
+task("deploy", "Deploys Smoothly Protocol")
+.addParam("multisig", "The multisig address account")
+.setAction(async (taskArgs) => {
+  await deployer(taskArgs.multisig);
+});
+
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
@@ -24,7 +32,9 @@ const config: HardhatUserConfig = {
     cache: "./cache",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API
+    apiKey: {
+      goerli: process.env.ETHERSCAN_API
+    }
   },
   gasReporter: {
     enabled: true
