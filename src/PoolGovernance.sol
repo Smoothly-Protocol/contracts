@@ -11,8 +11,8 @@ import {SmoothlyPool} from "./SmoothlyPool.sol";
 /// computed state for every epoch. Reach consensus and pass the data to the
 /// SmoothlyPool contract.
 contract PoolGovernance is Ownable {
-    uint32 internal constant epochInterval = 1 days;
     uint8 internal constant votingRatio = 66; // % of agreements required
+    uint32 public epochInterval = 1 days;
     uint64 public epochNumber;
     uint64 public lastEpoch;
     address[] public operators;
@@ -155,5 +155,11 @@ contract PoolGovernance is Ownable {
     /// @param newOwner owner to transfer ownership to
     function transferPoolOwnership(address newOwner) external onlyOwner {
         pool.transferOwnership(newOwner);
+    }
+
+    /// @notice Changes epochInterval timelock value
+    /// @param interval updates epochInterval
+    function updateInterval(uint32 interval) external onlyOwner {
+      epochInterval = interval;
     }
 }
