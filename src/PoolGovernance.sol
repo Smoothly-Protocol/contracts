@@ -12,11 +12,11 @@ import {SmoothlyPool} from "./SmoothlyPool.sol";
 /// SmoothlyPool contract.
 contract PoolGovernance is Ownable {
     uint8 internal constant votingRatio = 66; // % of agreements required
-    uint32 public epochInterval = 1 days;
+    uint32 public epochInterval = 7 days;
     uint64 public epochNumber;
     uint64 public lastEpoch;
     address[] public operators;
-    SmoothlyPool public immutable pool;
+    SmoothlyPool public pool;
 
     /// @notice Epoch data to update the Smoothly Pool state
     /// @param withdrawals Merkle root hash for withdrawals
@@ -52,9 +52,12 @@ contract PoolGovernance is Ownable {
         _;
     }
 
-    constructor() {
+    constructor(address[] memory _operators, SmoothlyPool _pool) {
         lastEpoch = uint64(block.timestamp);
-        pool = new SmoothlyPool();
+        address(_pool) == address(0)
+          ? pool = new SmoothlyPool() 
+          : pool = SmoothlyPool(_pool);
+        _addOperators(_operators);
     }
 
     /// @dev Receives fees from Smoothly Pool
@@ -120,12 +123,7 @@ contract PoolGovernance is Ownable {
     /// @notice Adds operators
     /// @param _operators List of new operators
     function addOperators(address[] calldata _operators) external onlyOwner {
-        for (uint256 i = 0; i < _operators.length; ++i) {
-            if (isOperator[_operators[i]])
-                revert ExistingOperator(_operators[i]);
-            isOperator[_operators[i]] = true;
-            operators.push(_operators[i]);
-        }
+        _addOperators(_operators); 
     }
 
     /// @notice Deletes operators
@@ -135,12 +133,12 @@ contract PoolGovernance is Ownable {
             isOperator[_operators[i]] = false;
             uint256 operatorsLen = operators.length;
             for (uint256 x = 0; x < operatorsLen; ++x) {
-                if (operators[x] == _operators[x]) {
+                if (operators[x] == _operators[i]) {
                     operators[x] = operators[operatorsLen - 1];
                     operators.pop();
                     // Transfer rewards to pool
-                    uint256 rewards = operatorRewards[_operators[x]];
-                    operatorRewards[_operators[x]] = 0;
+                    uint256 rewards = operatorRewards[_operators[i]];
+                    operatorRewards[_operators[i]] = 0;
                     if (rewards != 0) {
                       (bool sent, ) = address(pool).call{value: rewards}("");
                       if (!sent) revert CallTransferFailed();
@@ -161,5 +159,16 @@ contract PoolGovernance is Ownable {
     /// @param interval updates epochInterval
     function updateInterval(uint32 interval) external onlyOwner {
       epochInterval = interval;
+    }
+
+    /// @notice Adds operators
+    /// @param _operators List of new operators
+    function _addOperators(address[] memory _operators) internal {
+        for (uint256 i = 0; i < _operators.length; ++i) {
+            if (isOperator[_operators[i]])
+                revert ExistingOperator(_operators[i]);
+            isOperator[_operators[i]] = true;
+            operators.push(_operators[i]);
+        }
     }
 }

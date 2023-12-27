@@ -8,11 +8,11 @@ describe("PoolGovernance", () => {
   let owner, acc1, acc2, acc3, operator1, operator2, operator3, operator4, operator5, operator6;
   let pool, governance;
   let withdrawals, exits, state, fee;
-
+  
   beforeEach(async () => {
     const Pool = await ethers.getContractFactory("SmoothlyPool");
     const Governance = await ethers.getContractFactory("PoolGovernance");
-    governance = await Governance.deploy();
+    governance = await Governance.deploy([], ethers.constants.AddressZero);
     pool = Pool.attach(await governance.pool());
 
     [owner, acc1, acc2, acc3, operator1, operator2, operator3, operator4, operator5, operator6] = await ethers.getSigners();
@@ -258,16 +258,19 @@ describe("PoolGovernance", () => {
         state,
         fee
       ]);
-      await governance.deleteOperators([operator1.address]);
+      await governance.deleteOperators([operator2.address]);
+      expect(
+        await governance.operatorRewards(operator2.address)
+      ).to.equal(0);
       expect(
         await governance.operatorRewards(operator1.address)
-      ).to.equal(0);
+      ).to.not.equal(0);
       expect(await ethers.provider.getBalance(governance.address)).to.equal(fee.div(2));
       expect(await governance.epochNumber()).to.equal(1);
       expect(await ethers.provider.getBalance(pool.address)).to.equal(
         ethers.utils.parseEther("1").sub(fee).add(fee.div(2))
       );
-      await expect(governance.connect(operator1).withdrawRewards())
+      await expect(governance.connect(operator2).withdrawRewards())
         .to.be.revertedWithCustomError(governance, 'Unauthorized');
     });
 
@@ -332,10 +335,31 @@ describe("PoolGovernance", () => {
     });
 
     it("delete Operators correctly", async() => {
-      await governance.deleteOperators(operators.slice(0,3));
+      // Single delete first
+      const remove1 = [operators[0]];
+      await governance.deleteOperators(remove1);
       expect(await governance.getOperators())
-      .to.have.all.members(operators.slice(3));
-      for(let operator of operators.slice(0,3)) {
+      .to.have.all.members(operators.slice(1));
+
+      // Single delete last
+      const remove2 = [operators[5]];
+      await governance.deleteOperators(remove2);
+      expect(await governance.getOperators())
+      .to.have.all.members(operators.slice(1,5));
+
+      // Multiple deletes
+      const remove3 = operators.slice(2,4);
+      await governance.deleteOperators(remove3);
+      expect(await governance.getOperators())
+      .to.have.all.members([operators[1], operators[4]]);
+      
+      // Multiple last addresses deletes
+      const remove4 = [operators[1], operators[4]];
+      await governance.deleteOperators(remove4);
+      expect(await governance.getOperators())
+      .to.deep.equal([]);
+
+      for(let operator of operators) {
         expect(await governance.isOperator(operator)).to.equal(false);
       }
     });
@@ -369,6 +393,95 @@ describe("PoolGovernance", () => {
       ])).to.be.revertedWith("Ownable: caller is not the owner");
       expect(await pool.owner()).to.equal(owner.address);
     });
+  });
+
+  describe("Governance Update", () => {
+    let operators; 
+    before(async() => {
+      operators = [
+        acc1.address,
+        acc2.address,
+        acc3.address,
+        operator1.address,
+        operator2.address,
+        operator3.address
+      ];
+    });
+
+    it("updates governance contract correctly", async() => {
+      let Governance2 = await ethers.getContractFactory("PoolGovernance");
+      let governance2 = await Governance2.deploy(operators, pool.address);
+
+      await governance.transferPoolOwnership(governance2.address);
+
+      expect(await governance2.pool()).to.equal(pool.address);
+      expect(await pool.owner()).to.equal(governance2.address);
+      expect(await governance2.getOperators()).to.have.all.members(operators);
+    });
+
+    it("should be able to propose an epoch updated contract", async() => {
+      let Governance2 = await ethers.getContractFactory("PoolGovernance");
+      let governance2 = await Governance2.deploy(operators, pool.address);
+
+      await governance.addOperators(operators);
+
+      await governance.transferPoolOwnership(governance2.address);
+      await time.increase(week);
+
+      // Old contract shouldn't be able to proposeEpoch
+      await governance.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance.connect(operator2).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance.connect(operator3).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await expect(governance.connect(acc1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])).to.be.revertedWith("Ownable: caller is not the owner");
+      expect(await pool.owner()).to.equal(governance2.address);
+
+      // New contract should be able to proposeEpoch
+      await governance2.connect(operator1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance2.connect(operator2).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await governance2.connect(operator3).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])
+      await expect(governance2.connect(acc1).proposeEpoch([
+        withdrawals.root,
+        exits.root,
+        state,
+        fee
+      ])).to.emit(pool, 'Epoch').withArgs(1, state, fee);
+    });
+
   });
 });
 
