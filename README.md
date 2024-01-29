@@ -1,6 +1,6 @@
-![1128 x 191](https://user-images.githubusercontent.com/106842341/233216304-4035a364-2733-4029-9b4c-c33b7cfab2b5.jpeg)
 
-# 
+# <img width="640" alt="logo+wordmark-pink@2x copy link" src="https://github.com/Smoothly-Protocol/contracts/assets/106842341/d471ccbb-b96d-4f91-a545-03b19a102ac8">
+
 **tldr:** 
 
 Smoothly is a tool which gives home validators the ability to pool together their tips and MEV from block proposals which, on average, increases their reward and allows for more frequent distributions. Home Stakers change the fee recipient address in their validator client to our pool contract and can connect their wallet and claim their “share” of the rewards ***fortnightly.*** < — (for you Phiz). 
