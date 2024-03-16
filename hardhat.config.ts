@@ -24,6 +24,10 @@ const config: HardhatUserConfig = {
       url: process.env.GOERLI,
       accounts: [process.env.OWNER]
     },
+    holesky: {
+      url: process.env.HOLESKY,
+      accounts: [process.env.OWNER]
+    },
     mainnet: {
       url: process.env.MAINNET,
       accounts: [process.env.OWNER2]
@@ -38,7 +42,8 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       goerli: process.env.ETHERSCAN_API,
-      mainnet: process.env.ETHERSCAN_API
+      mainnet: process.env.ETHERSCAN_API,
+      holesky: process.env.ETHERSCAN_API
     }
   },
   gasReporter: {

@@ -1,0 +1,3 @@
+Deploying contracts with the account: 0x40B5d89fCE766a0076Bd55dE77726696527e06B7
+Governance deployed with address: 0x9aF9D23c1efC2f94F49eFa1eAD7c5eC36b5f584E
+Pool deployed with address: 0xdDdaBb545F2dc906259A9a26C33095a37f5AB1F9

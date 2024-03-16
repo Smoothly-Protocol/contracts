@@ -12,7 +12,7 @@ import {SmoothlyPool} from "./SmoothlyPool.sol";
 /// SmoothlyPool contract.
 contract PoolGovernance is Ownable {
     uint8 internal constant votingRatio = 66; // % of agreements required
-    uint32 public epochInterval = 7 days;
+    uint32 public epochInterval = 5 days;
     uint64 public epochNumber;
     uint64 public lastEpoch;
     address[] public operators;
